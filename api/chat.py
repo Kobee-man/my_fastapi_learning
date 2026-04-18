@@ -1,15 +1,17 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from typing import Dict, List, Set
+from typing import Dict, List, Set,Optional
 from datetime import datetime
 import logging
 import uuid
+import asyncio
 
 from core.config import SECRET_KEY, ALGORITHM, get_db
 from core.security import get_current_user
 from models.db_models import User
 from models.db_models import PublicChatMessage
+from core.thread_pool import tp_manager
 from sqlmodel import Session, select
 
 # 设置日志
@@ -46,7 +48,7 @@ class ConnectionManager:
         try:
             # 查询最近50条消息
             statement = select(PublicChatMessage).order_by(PublicChatMessage.send_time.desc()).limit(50)
-            messages = db.exec(statement).all()
+            messages: List[PublicChatMessage] = list(db.exec(statement).all())
             # 反转顺序，使最早的消息在前
             messages.reverse()
             
@@ -94,43 +96,54 @@ class ConnectionManager:
                 except Exception as e:
                     logger.error(f"发送个人消息失败: {e}")
 
-    async def broadcast(self, message: dict, db: Session, user_id: int = None):
+# 广播消息给所有在线用户
+    async def broadcast(self, message: dict, db: Session, user_id: Optional[int] = None):
         logger.info(f"广播消息: {message['content'][:20]}...")
-        
-        # 保存到数据库
-        try:
-            if user_id:
-                # 普通消息
-                db_message = PublicChatMessage(
-                    sender_uid=user_id,
-                    content=message['content'],
-                    is_system=False
-                )
-            else:
-                # 系统消息
-                db_message = PublicChatMessage(
-                    sender_uid=1,  # 系统用户ID
-                    content=message['content'],
-                    is_system=True
-                )
-            db.add(db_message)
-            db.commit()
-            db.refresh(db_message)
-        except Exception as e:
-            logger.error(f"保存消息到数据库失败: {e}")
-            db.rollback()
-        
-        # 广播给所有在线连接
+
+        def save_message_to_db():
+            try:
+                if user_id:
+                    db_message = PublicChatMessage(
+                        sender_uid=user_id,
+                        content=message['content'],
+                        is_system=False
+                    )
+                else:
+                    db_message = PublicChatMessage(
+                        sender_uid=1,
+                        content=message['content'],
+                        is_system=True
+                    )
+                db.add(db_message)
+                db.commit()
+                db.refresh(db_message)
+            except Exception as e:
+                logger.error(f"保存消息到数据库失败: {e}")
+                db.rollback()
+
+        tp_manager.submit(save_message_to_db)
+
+        await self._broadcast_to_connections(message)
+
+    async def _broadcast_to_connections(self, message: dict):
         disconnected_connections = []
+        tasks = []
         for user_connections in self.active_connections.values():
             for connection_id, connection in user_connections.items():
                 try:
-                    await connection.send_json(message)
+                    task = asyncio.create_task(connection.send_json(message))
+                    tasks.append((connection_id, task))
                 except Exception as e:
                     logger.error(f"发送消息失败: {e}")
                     disconnected_connections.append(connection_id)
-        
-        # 清理失效连接
+
+        for connection_id, task in tasks:
+            try:
+                await task
+            except Exception as e:
+                logger.error(f"发送消息失败: {e}")
+                disconnected_connections.append(connection_id)
+
         for conn_id in disconnected_connections:
             self.disconnect(conn_id)
 
@@ -174,8 +187,17 @@ async def websocket_endpoint(
         
         # 建立连接
         await manager.connect(user_id, websocket, db)
-        connection_id = [cid for cid, uid in manager.connection_to_user.items() if uid == user_id and manager.active_connections[user_id].get(cid) == websocket][-1]
-        
+        connection_id = None
+        for cid, ws in manager.active_connections[user_id].items():
+            if ws == websocket:
+                connection_id = cid
+                break
+
+        if connection_id is None:
+            logger.error(f"无法找到用户的连接ID: {user_id}")
+            await websocket.close(code=1008, reason="无法找到连接")
+            return
+
         # 广播用户上线消息
         await manager.broadcast({
             "type": "system",
@@ -268,7 +290,7 @@ async def get_chat_history(
     try:
         # 从数据库查询历史消息
         statement = select(PublicChatMessage).order_by(PublicChatMessage.send_time.desc()).limit(limit)
-        messages = db.exec(statement).all()
+        messages: List[PublicChatMessage] = list(db.exec(statement).all())
         # 反转顺序，使最早的消息在前
         messages.reverse()
         

@@ -54,7 +54,7 @@ def allowed_file(filename: str | None) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @router.post("/user/avatar", summary="上传用户头像")
-def upload_avatar(
+async def upload_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -71,7 +71,9 @@ def upload_avatar(
         raise HTTPException(status_code=400, detail="文件大小超过限制（最大10MB）")
     
     #从当前session重新查询用户实例
-    db_user = db.exec(select(User).where(User.uid==current_user.uid)).first()
+    
+    db_user:Optional[User] = db.exec(select(User).where(User.uid == current_user.uid)).first()
+    
     if not db_user:
         raise HTTPException(status_code=404,detail="用户不存在")
     

@@ -320,8 +320,23 @@
             <button onclick="login()">登录</button>
         </div>
 
+
+    </div>
+
+    <!-- 聊天室页面 -->
+    <div id="chatPage" class="container">
+        <button class="back-to-auth" onclick="showAuthPage()">返回认证页面</button>
+        <button class="profile-btn" onclick="toggleProfile()">个人中心</button>
+        
+        <!-- 聊天室类型选择 -->
+        <div style="margin-bottom: 10px;">
+            <button onclick="switchChatType('public')" id="publicBtn" style="background-color: #007bff; color: white;">公共聊天室</button>
+            <button onclick="switchChatType('private')" id="privateBtn" style="background-color: #6c757d; color: white;">私聊</button>
+        </div>
+        
         <!-- 个人中心 -->
-        <div class="form-section" id="profile">
+        <div class="profile-section" id="profileSection" style="display: none; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+            <h3>个人中心</h3>
             <button onclick="getProfile()" style="margin-bottom: 20px;">获取个人信息</button>
             
             <div class="profile-info" id="profileInfo">
@@ -343,17 +358,6 @@
                 <input type="file" id="avatar-upload" accept="image/jpg,image/jpeg,image/png,image/gif">
                 <button onclick="uploadAvatar()">上传头像</button>
             </div>
-        </div>
-    </div>
-
-    <!-- 聊天室页面 -->
-    <div id="chatPage" class="container">
-        <button class="back-to-auth" onclick="showAuthPage()">返回认证页面</button>
-        
-        <!-- 聊天室类型选择 -->
-        <div style="margin-bottom: 10px;">
-            <button onclick="switchChatType('public')" id="publicBtn" style="background-color: #007bff; color: white;">公共聊天室</button>
-            <button onclick="switchChatType('private')" id="privateBtn" style="background-color: #6c757d; color: white;">私聊</button>
         </div>
         
         <!-- 公共聊天室 -->
@@ -424,6 +428,17 @@
                 // 初始化聊天室
                 initPublicChat();
             });
+        }
+
+        // 切换个人中心显示
+        function toggleProfile() {
+            const profileSection = document.getElementById('profileSection');
+            if (profileSection.style.display === 'none') {
+                profileSection.style.display = 'block';
+                getProfile(); // 显示时自动获取个人信息
+            } else {
+                profileSection.style.display = 'none';
+            }
         }
 
         // ==================== 聊天室类型切换 ====================
@@ -649,6 +664,8 @@
         }
 
         // ==================== 公共聊天室 ====================
+        let onlineCountInterval = null;
+
         function initPublicChat() {
             if (!token) {
                 showMessage('请先登录', false, 'chatMessageAlert');
@@ -661,30 +678,52 @@
             // 显示公共聊天容器
             document.getElementById('publicChatContainer').classList.add('active');
 
-            if (publicWebsocket) { 
-                publicWebsocket.close(); 
+            if (publicWebsocket) {
+                publicWebsocket.close();
                 publicWebsocket = null;
+            }
+
+            // 清除之前的定时器
+            if (onlineCountInterval) {
+                clearInterval(onlineCountInterval);
             }
 
             // 使用正确的WebSocket URL
             const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/ws/chat/${token}`;
             console.log("尝试连接公共聊天室WebSocket:", wsUrl);
-            
+
             publicWebsocket = new WebSocket(wsUrl);
 
             publicWebsocket.onopen = () => {
                 console.log("公共聊天室WebSocket连接已建立");
                 showMessage("已连接公共聊天室", true, 'chatMessageAlert');
                 updateOnlineCount();
+
+                // 每5秒刷新一次在线人数
+                onlineCountInterval = setInterval(updateOnlineCount, 5000);
             };
 
             publicWebsocket.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-                renderPublicMessage(msg);
+                if (msg.type === 'history' && msg.messages) {
+                    // 处理历史消息数组
+                    msg.messages.forEach(message => {
+                        renderPublicMessage(message);
+                    });
+                } else {
+                    // 处理单条消息
+                    renderPublicMessage(msg);
+                }
+                // 收到消息后更新在线人数（可能有人加入或离开）
+                updateOnlineCount();
             };
 
             publicWebsocket.onclose = (e) => {
                 console.log("公共聊天室WebSocket连接已关闭", e.code, e.reason);
+                if (onlineCountInterval) {
+                    clearInterval(onlineCountInterval);
+                    onlineCountInterval = null;
+                }
                 if (e.code !== 1000) { // 正常关闭
                     showMessage("公共聊天室连接断开，3秒后重连...", false, 'chatMessageAlert');
                     setTimeout(initPublicChat, 3000);
@@ -937,13 +976,8 @@
             currentUsername = localStorage.getItem('username') || '';
             token = localStorage.getItem('token') || '';
             
-            if (token && currentUsername) {
-                // 如果已有token和用户名，直接进入聊天室
-                showChatPage();
-            } else {
-                // 否则显示认证页面
-                showAuthPage();
-            }
+            // 无论是否有token，默认显示登录页
+            showAuthPage();
         }
     </script>
 </body>
