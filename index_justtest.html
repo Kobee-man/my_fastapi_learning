@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户认证系统 + 个人聊天室</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: bold;
+        }
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .profile-info {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+        .profile-info.active {
+            display: block;
+        }
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+        }
+        .alert {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .alert.success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .alert.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        .hidden {
+            display: none;
+        }
+
+        /* ==================== 聊天室样式 ==================== */
+        .chat-container {
+            display: none;
+            height: 600px;
+            flex-direction: column;
+        }
+        .chat-container.active {
+            display: flex;
+        }
+        .chat-header {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.system {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin: 5px auto;
+            max-width: 100%;
+        }
+        .message.own {
+            align-items: flex-start;  /* 我的消息靠左 */
+        }
+        .message.other {
+            align-items: flex-end;  /* 别人的消息靠右 */
+        }
+        .message-content {
+            padding: 8px 12px;
+            border-radius: 18px;
+            word-break: break-all;
+            max-width: 70%;
+        }
+        .message.own .message-content {
+            background-color: #007bff;  /* 我的消息蓝色背景 */
+            color: white;
+            border-bottom-left-radius: 4px;  /* 左下角尖角 */
+        }
+        .message.other .message-content {
+            background-color: #fff;  /* 别人的消息白色背景 */
+            border: 1px solid #eee;
+            border-bottom-right-radius: 4px;  /* 右下角尖角 */
+        }
+        .message-info {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+            padding: 0 4px;
+            align-self: flex-start;
+        }
+        .message.own .message-info {
+            align-self: flex-start;
+        }
+        .message.other .message-info {
+            align-self: flex-end;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            margin-top: 0;
+        }
+        .chat-input button {
+            width: 80px;
+            margin-top: 0;
+        }
+        .online-users {
+            font-size: 12px;
+            color: #666;
+        }
+        .back-to-auth {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #6c757d;
+        }
+        .back-to-auth:hover {
+            background-color: #5a6268;
+        }
+        
+        /* ==================== 私聊好友列表 ==================== */
+        .friend-list {
+            margin-top: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .friend-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .friend-item:hover {
+            background-color: #f0f0f0;
+        }
+        .friend-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .friend-name {
+            flex: 1;
+        }
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .online {
+            background-color: #28a745;
+        }
+        .offline {
+            background-color: #6c757d;
+        }
+        
+        /* ==================== 私聊房间选择 ==================== */
+        .private-chat-container {
+            display: none;
+            height: 600px;
+            flex-direction: column;
+        }
+        .private-chat-container.active {
+            display: flex;
+        }
+        .room-selector {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .room-option {
+            padding: 5px 10px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .room-option:hover {
+            background-color: #e0e0e0;
+        }
+        .room-option.active {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- 认证页面 -->
+    <div id="authPage" class="container">
+        <div class="alert" id="messageAlert"></div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="register">注册</div>
+            <div class="tab" data-tab="login">登录</div>
+            <div class="tab" data-tab="profile">个人中心</div>
+        </div>
+
+        <!-- 注册表单 -->
+        <div class="form-section active" id="register">
+            <div class="form-group">
+                <label for="reg-username">用户名</label>
+                <input type="text" id="reg-username" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="reg-password">密码</label>
+                <input type="password" id="reg-password" placeholder="请输入密码">
+            </div>
+            <div class="form-group">
+                <label for="reg-nickname">昵称（可选）</label>
+                <input type="text" id="reg-nickname" placeholder="请输入昵称">
+            </div>
+            <button onclick="register()">注册</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <div class="form-section" id="login">
+            <div class="form-group">
+                <label for="login-username">用户名</label>
+                <input type="text" id="login-username" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="login-password">密码</label>
+                <input type="password" id="login-password" placeholder="请输入密码">
+            </div>
+            <button onclick="login()">登录</button>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="form-section" id="profile">
+            <button onclick="getProfile()" style="margin-bottom: 20px;">获取个人信息</button>
+            
+            <div class="profile-info" id="profileInfo">
+                <img src="" alt="头像" class="avatar-preview" id="avatarPreview">
+                <div><strong>UID：</strong><span id="profileUid"></span></div>
+                <div><strong>用户名：</strong><span id="profileUsername"></span></div>
+                <div><strong>昵称：</strong><span id="profileNickname"></span></div>
+                <div><strong>头像地址：</strong><span id="profileAvatarUrl"></span></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="new-nickname">修改昵称</label>
+                <input type="text" id="new-nickname" placeholder="请输入新昵称">
+                <button onclick="updateNickname()">保存昵称</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="avatar-upload">上传头像</label>
+                <input type="file" id="avatar-upload" accept="image/jpg,image/jpeg,image/png,image/gif">
+                <button onclick="uploadAvatar()">上传头像</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天室页面 -->
+    <div id="chatPage" class="container">
+        <button class="back-to-auth" onclick="showAuthPage()">返回认证页面</button>
+        
+        <!-- 聊天室类型选择 -->
+        <div style="margin-bottom: 10px;">
+            <button onclick="switchChatType('public')" id="publicBtn" style="background-color: #007bff; color: white;">公共聊天室</button>
+            <button onclick="switchChatType('private')" id="privateBtn" style="background-color: #6c757d; color: white;">私聊</button>
+        </div>
+        
+        <!-- 公共聊天室 -->
+        <div class="chat-container" id="publicChatContainer">
+            <div class="chat-header">
+                <h3>公共聊天室</h3>
+                <div class="online-users" id="onlineUsers">在线用户: 0</div>
+            </div>
+            
+            <div class="chat-messages" id="publicChatMessages"></div>
+            
+            <div class="chat-input">
+                <input type="text" id="publicChatMessageInput" placeholder="输入消息，按回车发送...">
+                <button onclick="sendPublicMessage()">发送</button>
+            </div>
+        </div>
+        
+        <!-- 私聊页面 -->
+        <div class="private-chat-container" id="privateChatContainer">
+            <div class="room-selector">
+                <h4>选择聊天对象</h4>
+                <div class="friend-list" id="friendList">
+                    <!-- 好友列表将动态加载 -->
+                </div>
+            </div>
+            
+            <div class="chat-header">
+                <h3 id="currentChatUser">与谁聊天</h3>
+                <div class="online-users" id="currentStatus">离线</div>
+            </div>
+            
+            <div class="chat-messages" id="privateChatMessages"></div>
+            
+            <div class="chat-input">
+                <input type="text" id="privateChatMessageInput" placeholder="输入私信，按回车发送...">
+                <button onclick="sendPrivateMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 基础配置
+        const API_BASE_URL = "http://127.0.0.1:8000";
+        let token = localStorage.getItem("token") || "";
+        let currentUsername = "";
+        let currentUserUid = null;
+
+        // WebSocket 实例
+        let publicWebsocket = null;
+        let privateWebsocket = null;
+        let currentPrivateChatTarget = null;
+
+        // 当前聊天类型 ('public' 或 'private')
+        let currentChatType = 'public';
+
+        // ==================== 页面切换 ====================
+        function showAuthPage() {
+            document.getElementById('authPage').style.display = 'block';
+            document.getElementById('chatPage').style.display = 'none';
+        }
+
+        function showChatPage() {
+            document.getElementById('authPage').style.display = 'none';
+            document.getElementById('chatPage').style.display = 'block';
+            
+            // 获取当前用户信息
+            getProfile().then(() => {
+                // 初始化聊天室
+                initPublicChat();
+            });
+        }
+
+        // ==================== 聊天室类型切换 ====================
+        function switchChatType(type) {
+            if (type === 'public') {
+                document.getElementById('publicBtn').style.backgroundColor = '#007bff';
+                document.getElementById('privateBtn').style.backgroundColor = '#6c757d';
+                
+                document.getElementById('publicChatContainer').classList.add('active');
+                document.getElementById('privateChatContainer').classList.remove('active');
+                
+                currentChatType = 'public';
+                
+                // 如果还没初始化公共聊天室，则初始化
+                if (!publicWebsocket) {
+                    initPublicChat();
+                }
+            } else {
+                document.getElementById('privateBtn').style.backgroundColor = '#007bff';
+                document.getElementById('publicBtn').style.backgroundColor = '#6c757d';
+                
+                document.getElementById('privateChatContainer').classList.add('active');
+                document.getElementById('publicChatContainer').classList.remove('active');
+                
+                currentChatType = 'private';
+                
+                // 加载好友列表
+                loadFriendList();
+            }
+        }
+
+        // ==================== 标签切换 ====================
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // ==================== 提示消息 ====================
+        function showMessage(text, isSuccess = true, targetElement = 'messageAlert') {
+            const alertEl = document.getElementById(targetElement);
+            alertEl.textContent = text;
+            alertEl.className = `alert ${isSuccess ? 'success' : 'error'}`;
+            
+            setTimeout(() => {
+                alertEl.className = 'alert';
+            }, 3000);
+        }
+
+        // ==================== 注册 ====================
+        async function register() {
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+            const nickname = document.getElementById('reg-nickname').value;
+
+            if (!username || !password) {
+                showMessage('用户名和密码不能为空', false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, nickname: nickname || undefined })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('注册成功！请登录');
+                    document.getElementById('reg-username').value = '';
+                    document.getElementById('reg-password').value = '';
+                    document.getElementById('reg-nickname').value = '';
+                    document.querySelector('[data-tab="login"]').click();
+                } else {
+                    showMessage(data.detail || '注册失败', false);
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', false);
+            }
+        }
+
+        // ==================== 登录 ====================
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!username || !password) {
+                showMessage('用户名和密码不能为空', false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    token = data.access_token;
+                    currentUsername = username;
+                    localStorage.setItem("token", token);
+                    localStorage.setItem("username", username);
+                    
+                    showMessage('登录成功！正在跳转到聊天室...');
+                    
+                    // 登录成功后自动跳转到聊天室
+                    setTimeout(() => {
+                        showChatPage();
+                    }, 1000);
+                } else {
+                    showMessage(data.detail || '登录失败', false);
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', false);
+            }
+        }
+
+        // ==================== 获取个人信息 ====================
+        async function getProfile() {
+            if (!token) {
+                showMessage('请先登录', false);
+                document.querySelector('[data-tab="login"]').click();
+                return Promise.resolve(null);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('profileUid').textContent = data.data.uid;
+                    document.getElementById('profileUsername').textContent = data.data.username;
+                    document.getElementById('profileNickname').textContent = data.data.nickname;
+                    document.getElementById('profileAvatarUrl').textContent = data.data.avatar_access_url || '未上传';
+                    
+                    const avatarPreview = document.getElementById('avatarPreview');
+                    avatarPreview.src = data.data.avatar_access_url || 'https://via.placeholder.com/100';
+                    
+                    document.getElementById('profileInfo').classList.add('active');
+                    showMessage('获取个人信息成功');
+                    
+                    currentUserUid = data.data.uid;
+                    return data.data;
+                } else {
+                    showMessage('登录已过期，请重新登录', false);
+                    localStorage.removeItem('token');
+                    token = '';
+                    document.querySelector('[data-tab="login"]').click();
+                    return null;
+                }
+            } catch (error) {
+                showMessage('网络错误', false);
+                return null;
+            }
+        }
+
+        // ==================== 修改昵称 ====================
+        async function updateNickname() {
+            if (!token) { showMessage('请先登录', false); return; }
+            const newNickname = document.getElementById('new-nickname').value;
+            if (!newNickname) { showMessage('昵称不能为空', false); return; }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/user/nickname`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ nickname: newNickname })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('昵称修改成功！');
+                    document.getElementById('new-nickname').value = '';
+                    getProfile();
+                } else {
+                    showMessage(data.detail || '修改失败', false);
+                }
+            } catch (error) {
+                showMessage('网络错误', false);
+            }
+        }
+
+        // ==================== 上传头像 ====================
+        async function uploadAvatar() {
+            if (!token) { showMessage('请先登录', false); return; }
+            const file = document.getElementById('avatar-upload').files[0];
+            if (!file) { showMessage('请选择图片', false); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/user/avatar`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('上传成功！');
+                    document.getElementById('avatar-upload').value = '';
+                    getProfile();
+                } else {
+                    showMessage('上传失败', false);
+                }
+            } catch (error) {
+                showMessage('网络错误', false);
+            }
+        }
+
+        // ==================== 公共聊天室 ====================
+        function initPublicChat() {
+            if (!token) {
+                showMessage('请先登录', false, 'chatMessageAlert');
+                setTimeout(() => {
+                    showAuthPage();
+                }, 2000);
+                return;
+            }
+
+            // 显示公共聊天容器
+            document.getElementById('publicChatContainer').classList.add('active');
+
+            if (publicWebsocket) { 
+                publicWebsocket.close(); 
+                publicWebsocket = null;
+            }
+
+            // 使用正确的WebSocket URL
+            const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/ws/chat/${token}`;
+            console.log("尝试连接公共聊天室WebSocket:", wsUrl);
+            
+            publicWebsocket = new WebSocket(wsUrl);
+
+            publicWebsocket.onopen = () => {
+                console.log("公共聊天室WebSocket连接已建立");
+                showMessage("已连接公共聊天室", true, 'chatMessageAlert');
+                updateOnlineCount();
+            };
+
+            publicWebsocket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                renderPublicMessage(msg);
+            };
+
+            publicWebsocket.onclose = (e) => {
+                console.log("公共聊天室WebSocket连接已关闭", e.code, e.reason);
+                if (e.code !== 1000) { // 正常关闭
+                    showMessage("公共聊天室连接断开，3秒后重连...", false, 'chatMessageAlert');
+                    setTimeout(initPublicChat, 3000);
+                }
+            };
+
+            publicWebsocket.onerror = (error) => {
+                console.error("公共聊天室WebSocket错误:", error);
+                showMessage("公共聊天室连接失败", false, 'chatMessageAlert');
+            };
+        }
+
+        // 渲染公共聊天消息
+        function renderPublicMessage(msg) {
+            const box = document.getElementById('publicChatMessages');
+            const div = document.createElement('div');
+
+            if (msg.type === 'system') {
+                div.className = 'message system';
+                div.textContent = msg.content;
+            } else {
+                // 判断是否为自己发送的消息
+                const isOwnMessage = msg.username === localStorage.getItem('username');
+                
+                if (isOwnMessage) {
+                    div.className = 'message own';  // 自己的消息靠左
+                } else {
+                    div.className = 'message other';  // 别人的消息靠右
+                }
+
+                const content = document.createElement('div');
+                content.className = 'message-content';
+                content.textContent = msg.content;
+
+                const info = document.createElement('div');
+                info.className = 'message-info';
+                const time = new Date(msg.timestamp).toLocaleTimeString();
+                info.textContent = `${msg.nickname} · ${time}`;
+
+                div.appendChild(content);
+                div.appendChild(info);
+            }
+
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // 发送公共消息
+        function sendPublicMessage() {
+            const input = document.getElementById('publicChatMessageInput');
+            const content = input.value.trim();
+
+            if (!content) { showMessage("消息不能为空", false, 'chatMessageAlert'); return; }
+            if (!publicWebsocket || publicWebsocket.readyState !== WebSocket.OPEN) { showMessage("未连接", false, 'chatMessageAlert'); return; }
+
+            publicWebsocket.send(JSON.stringify({ content }));
+            input.value = '';
+        }
+
+        // ==================== 私聊功能 ====================
+        async function loadFriendList() {
+            if (!token) {
+                showMessage('请先登录', false);
+                return;
+            }
+
+            try {
+                // 获取所有用户列表（模拟好友列表）
+                const response = await fetch(`${API_BASE_URL}/chat/online-users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                const friendList = document.getElementById('friendList');
+                friendList.innerHTML = '';
+
+                if (data.data && Array.isArray(data.data)) {
+                    data.data.forEach(user => {
+                        // 不显示自己
+                        if (user.uid !== currentUserUid) {
+                            const friendItem = document.createElement('div');
+                            friendItem.className = 'friend-item';
+                            friendItem.onclick = () => startPrivateChat(user.uid, user.nickname || user.username);
+                            
+                            const avatar = document.createElement('img');
+                            avatar.className = 'friend-avatar';
+                            avatar.src = user.avatar_url || 'https://via.placeholder.com/30';
+                            avatar.alt = '头像';
+                            
+                            const name = document.createElement('span');
+                            name.className = 'friend-name';
+                            name.textContent = user.nickname || user.username;
+                            
+                            const status = document.createElement('span');
+                            status.className = 'status-indicator online';
+                            
+                            friendItem.appendChild(avatar);
+                            friendItem.appendChild(name);
+                            friendItem.appendChild(status);
+                            
+                            friendList.appendChild(friendItem);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("加载好友列表失败:", error);
+                showMessage("加载好友列表失败", false);
+            }
+        }
+
+        function startPrivateChat(targetUid, targetName) {
+            currentPrivateChatTarget = targetUid;
+            document.getElementById('currentChatUser').textContent = `与 ${targetName} 私聊`;
+            
+            // 更新状态显示
+            updatePrivateChatStatus(true);
+            
+            // 清空私聊消息区域
+            document.getElementById('privateChatMessages').innerHTML = '';
+            
+            // 初始化私聊WebSocket
+            initPrivateChat(targetUid);
+        }
+
+        function initPrivateChat(targetUid) {
+            if (!token) {
+                showMessage('请先登录', false, 'chatMessageAlert');
+                return;
+            }
+
+            if (privateWebsocket) { 
+                privateWebsocket.close(); 
+                privateWebsocket = null;
+            }
+
+            // 使用私聊WebSocket URL (注意：这里假设后端支持私聊WebSocket)
+            const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/ws/private-chat/${token}/${targetUid}`;
+            console.log("尝试连接私聊WebSocket:", wsUrl);
+            
+            // 模拟私聊连接（实际上后端需要支持）
+            privateWebsocket = new WebSocket(wsUrl);
+
+            privateWebsocket.onopen = () => {
+                console.log("私聊WebSocket连接已建立");
+                showMessage("已连接私聊", true, 'chatMessageAlert');
+            };
+
+            privateWebsocket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                renderPrivateMessage(msg);
+            };
+
+            privateWebsocket.onclose = (e) => {
+                console.log("私聊WebSocket连接已关闭", e.code, e.reason);
+                if (e.code !== 1000) { // 正常关闭
+                    showMessage("私聊连接断开，3秒后重连...", false, 'chatMessageAlert');
+                    setTimeout(() => initPrivateChat(targetUid), 3000);
+                }
+            };
+
+            privateWebsocket.onerror = (error) => {
+                console.error("私聊WebSocket错误:", error);
+                showMessage("私聊连接失败", false, 'chatMessageAlert');
+            };
+        }
+
+        function renderPrivateMessage(msg) {
+            const box = document.getElementById('privateChatMessages');
+            const div = document.createElement('div');
+
+            if (msg.type === 'system') {
+                div.className = 'message system';
+                div.textContent = msg.content;
+            } else {
+                // 判断是否为自己发送的消息
+                const isOwnMessage = msg.from_uid === currentUserUid;
+                
+                if (isOwnMessage) {
+                    div.className = 'message own';  // 自己的消息靠左
+                } else {
+                    div.className = 'message other';  // 对方的消息靠右
+                }
+
+                const content = document.createElement('div');
+                content.className = 'message-content';
+                content.textContent = msg.content;
+
+                const info = document.createElement('div');
+                info.className = 'message-info';
+                const time = new Date(msg.timestamp).toLocaleTimeString();
+                info.textContent = `${msg.from_nickname || msg.from_username} · ${time}`;
+
+                div.appendChild(content);
+                div.appendChild(info);
+            }
+
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendPrivateMessage() {
+            if (!currentPrivateChatTarget) {
+                showMessage("请先选择聊天对象", false, 'chatMessageAlert');
+                return;
+            }
+            
+            const input = document.getElementById('privateChatMessageInput');
+            const content = input.value.trim();
+
+            if (!content) { showMessage("消息不能为空", false, 'chatMessageAlert'); return; }
+            if (!privateWebsocket || privateWebsocket.readyState !== WebSocket.OPEN) { showMessage("未连接", false, 'chatMessageAlert'); return; }
+
+            privateWebsocket.send(JSON.stringify({ 
+                content: content,
+                to_uid: currentPrivateChatTarget
+            }));
+            input.value = '';
+        }
+
+        function updatePrivateChatStatus(isOnline) {
+            const statusElement = document.getElementById('currentStatus');
+            statusElement.textContent = isOnline ? '在线' : '离线';
+            statusElement.style.color = isOnline ? '#28a745' : '#6c757d';
+        }
+
+        // ==================== 在线人数 ====================
+        async function updateOnlineCount() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/chat/online-users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                document.getElementById('onlineUsers').textContent = `在线用户: ${data.data.length}`;
+            } catch (e) {
+                console.error("获取在线用户数失败:", e);
+            }
+        }
+
+        // 回车发送消息
+        document.getElementById('publicChatMessageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendPublicMessage();
+        });
+
+        document.getElementById('privateChatMessageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendPrivateMessage();
+        });
+
+        // ==================== 页面加载 ====================
+        window.onload = function() {
+            currentUsername = localStorage.getItem('username') || '';
+            token = localStorage.getItem('token') || '';
+            
+            if (token && currentUsername) {
+                // 如果已有token和用户名，直接进入聊天室
+                showChatPage();
+            } else {
+                // 否则显示认证页面
+                showAuthPage();
+            }
+        }
+    </script>
+</body>
+</html>
