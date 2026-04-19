@@ -97,7 +97,7 @@ class ConnectionManager:
                     logger.error(f"发送个人消息失败: {e}")
 
 # 广播消息给所有在线用户
-    async def broadcast(self, message: dict, db: Session, user_id: Optional[int] = None):
+    async def broadcast(self, message: dict, db: Session, user_id: Optional[str] = None):
         logger.info(f"广播消息: {message['content'][:20]}...")
 
         def save_message_to_db():
@@ -110,7 +110,7 @@ class ConnectionManager:
                     )
                 else:
                     db_message = PublicChatMessage(
-                        sender_uid=1,
+                        sender_uid="0000000000",
                         content=message['content'],
                         is_system=True
                     )
@@ -259,9 +259,7 @@ async def get_online_users(
         seen_user_ids.add(user_id_str)
         
         try:
-            # 将字符串转换为整数UID，然后查询用户
-            user_id_int = int(user_id_str)
-            statement = select(User).where(User.uid == user_id_int)
+            statement = select(User).where(User.uid == user_id_str)
             user = db.exec(statement).first()
             if user:
                 online_users.append({

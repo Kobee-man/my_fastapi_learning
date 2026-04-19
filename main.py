@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-from core.config import create_db_and_tables
+from core.database import init_db, engine, Base
 from api import auth, user,chat
 from fastapi.middleware.cors import CORSMiddleware
-from core.database import init_db
 from core.thread_pool import tp_manager
 
 init_db()
@@ -13,7 +12,7 @@ init_db()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tp_manager.init_pool(max_workers=10)
-    create_db_and_tables()
+    Base.metadata.create_all(engine)
     yield
     tp_manager.shutdown()
 

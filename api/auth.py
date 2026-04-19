@@ -6,6 +6,7 @@ from typing import Optional
 
 from core.config import get_db
 from core.security import get_password_hash, verify_password, create_access_token
+from core.utils import generate_10digit_numeric_uid
 from models.db_models import User
 
 router = APIRouter()
@@ -23,7 +24,9 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="用户名已存在")
 
     hashed_pw = get_password_hash(user.password)
+    new_uid = generate_10digit_numeric_uid(db)
     db_user = User(
+        uid=new_uid,
         username=user.username,
         nickname=user.nickname,
         password=hashed_pw
