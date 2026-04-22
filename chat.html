@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0c0e1a 0%, #1a1a3e 30%, #0d1b2a 60%, #1b263b 100%);
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        .glow-orb {
+            position: fixed; border-radius: 50%; filter: blur(80px);
+            animation: orbFloat ease-in-out infinite;
+            pointer-events: none; z-index: 0;
+        }
+        .orb-1 { width: 400px; height: 400px; background: rgba(99,102,241,0.12); top: -100px; left: -100px; animation-duration: 8s; }
+        .orb-2 { width: 350px; height: 350px; background: rgba(236,72,153,0.10); bottom: -80px; right: -80px; animation-duration: 10s; animation-delay: -3s; }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -20px) scale(1.05); }
+            50% { transform: translate(-20px, 30px) scale(0.95); }
+            75% { transform: translate(20px, 20px) scale(1.02); }
+        }
+
+        .chat-wrapper {
+            position: relative; z-index: 10;
+            width: 760px; max-width: 95vw; margin: 24px auto;
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            padding: 26px;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.35);
+            animation: chatEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes chatEntrance {
+            from { opacity: 0; transform: translateY(30px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .chat-header-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 18px; padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .chat-header-bar h3 { color: #fff; font-size: 19px; font-weight: 700; }
+        .header-btns button {
+            padding: 8px 16px; border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7);
+            border-radius: 9px; cursor: pointer; font-size: 13px; margin-left: 8px;
+            transition: all 0.2s;
+        }
+        .header-btns button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .header-btns .logout-btn:hover {
+            background: rgba(239,68,68,0.15); color: #f87171;
+            border-color: rgba(239,68,68,0.3);
+        }
+
+        .chat-type-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .chat-type-tabs button {
+            padding: 9px 20px; border: none; border-radius: 10px;
+            cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
+        }
+        .chat-type-tabs button.active {
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+        }
+        .chat-type-tabs button:not(.active) {
+            background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
+        }
+        .chat-type-tabs button:not(.active):hover {
+            background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.7);
+        }
+
+        .chat-box {
+            height: 420px; overflow-y: auto;
+            background: rgba(0,0,0,0.18);
+            border-radius: 14px; padding: 16px; margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            scroll-behavior: smooth;
+        }
+        .chat-box::-webkit-scrollbar { width: 5px; }
+        .chat-box::-webkit-scrollbar-track { background: transparent; }
+        .chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        .msg-item { margin-bottom: 14px; display: flex; flex-direction: column; }
+        .msg-item.sys { align-items: center; }
+        .msg-item.sys span {
+            font-size: 12px; color: rgba(255,255,255,0.32);
+            background: rgba(255,255,255,0.04);
+            padding: 4px 14px; border-radius: 10px;
+        }
+        .msg-bubble {
+            max-width: 70%; padding: 11px 17px; border-radius: 17px;
+            font-size: 14px; line-height: 1.55; word-break: break-all;
+        }
+        .msg-item.mine { align-items: flex-start; }
+        .msg-item.mine .msg-bubble {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff; border-bottom-left-radius: 5px;
+        }
+        .msg-item.other { align-items: flex-end; }
+        .msg-item.other .msg-bubble {
+            background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.88);
+            border: 1px solid rgba(255,255,255,0.06); border-bottom-right-radius: 5px;
+        }
+        .msg-meta {
+            font-size: 11px; color: rgba(255,255,255,0.28);
+            margin-top: 4px; padding: 0 4px;
+        }
+        .msg-item.mine .msg-meta { align-self: flex-start; }
+        .msg-item.other .msg-meta { align-self: flex-end; }
+
+        .chat-input-row { display: flex; gap: 10px; align-items: center; }
+        .chat-input-row input {
+            flex: 1; padding: 13px 18px; border-radius: 13px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05); color: #fff;
+            font-size: 14px; outline: none; transition: all 0.2s;
+        }
+        .chat-input-row input:focus {
+            border-color: rgba(99,102,241,0.5);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+        .chat-input-row input::placeholder { color: rgba(255,255,255,0.22); }
+        .chat-input-row button {
+            padding: 13px 24px; border: none; border-radius: 13px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff; font-weight: 600; cursor: pointer; font-size: 14px;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .chat-input-row button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 18px rgba(99,102,241,0.35);
+        }
+
+        .profile-panel {
+            display: none; margin-bottom: 18px; padding: 22px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            animation: panelSlide 0.3s ease both;
+        }
+        @keyframes panelSlide {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .profile-panel.show { display: block; }
+        .profile-panel h4 { color: #fff; margin-bottom: 14px; font-size: 16px; font-weight: 700; }
+        .profile-info-grid { display: grid; gap: 8px; margin-bottom: 18px; }
+        .profile-info-grid div {
+            padding: 9px 13px; background: rgba(255,255,255,0.03);
+            border-radius: 9px; font-size: 13px; color: rgba(255,255,255,0.7);
+        }
+        .profile-info-grid strong { color: rgba(255,255,255,0.38); margin-right: 7px; }
+        .avatar-display {
+            width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+            border: 2px solid rgba(99,102,241,0.4); margin-bottom: 14px;
+        }
+        .pf-form-group { margin-bottom: 14px; }
+        .pf-form-group label {
+            display: block; font-size: 12px; color: rgba(255,255,255,0.42); margin-bottom: 6px;
+        }
+        .pf-form-group input[type="text"], .pf-form-group input[type="file"] {
+            width: 100%; padding: 10px 14px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05); color: #fff; font-size: 14px;
+        }
+        .pf-form-group input::placeholder { color: rgba(255,255,255,0.2); }
+        .pf-form-group button {
+            padding: 10px 22px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff; font-weight: 600; cursor: pointer; font-size: 13px;
+            margin-top: 5px; transition: all 0.2s;
+        }
+        .pf-form-group button:hover { box-shadow: 0 4px 14px rgba(99,102,241,0.3); }
+
+        .friend-panel { margin-bottom: 14px; }
+        .friend-panel h5 { color: rgba(255,255,255,0.55); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+        .friend-list-scroll {
+            max-height: 150px; overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 11px;
+            background: rgba(0,0,0,0.12);
+        }
+        .friend-list-scroll::-webkit-scrollbar { width: 4px; }
+        .friend-list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+        .friend-item {
+            padding: 11px 14px; display: flex; align-items: center;
+            cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
+        }
+        .friend-item:hover { background: rgba(255,255,255,0.05); }
+        .friend-item:last-child { border-bottom: none; }
+        .friend-avatar-sm {
+            width: 34px; height: 34px; border-radius: 50%;
+            object-fit: cover; margin-right: 11px;
+        }
+        .friend-name-text { flex: 1; font-size: 13px; color: rgba(255,255,255,0.82); }
+        .dot-status { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .dot-on { background: #22c55e; box-shadow: 0 0 7px rgba(34,197,94,0.5); }
+        .dot-off { background: rgba(255,255,255,0.18); }
+
+        .online-count-badge {
+            font-size: 12px; color: rgba(255,255,255,0.36);
+        }
+        .status-label {
+            font-size: 13px; color: rgba(255,255,255,0.72);
+        }
+
+        .hidden { display: none !important; }
+
+        .alert-toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 12px; z-index: 9999;
+            font-size: 13px; font-weight: 500; animation: toastIn 0.3s ease both;
+            backdrop-filter: blur(12px);
+        }
+        .alert-toast.success {
+            background: rgba(34,197,94,0.15); color: #4ade80;
+            border: 1px solid rgba(34,197,94,0.25);
+        }
+        .alert-toast.error {
+            background: rgba(239,68,68,0.15); color: #f87171;
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(-50%) translateY(0); }
+            to { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+        }
+
+        .section-row {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .section-title { font-size: 13px; color: rgba(255,255,255,0.38); font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="chat-wrapper">
+        <div class="chat-header-bar">
+            <h3>&#128172; 聊天室</h3>
+            <div class="header-btns">
+                <button onclick="toggleProfilePanel()">个人中心</button>
+                <button class="logout-btn" onclick="doLogout()">&#128682; 退出登录</button>
+            </div>
+        </div>
+
+        <div class="chat-type-tabs">
+            <button id="pubBtn" class="active" onclick="switchChatType('public')">公共聊天室</button>
+            <button id="priBtn" onclick="switchChatType('private')">私聊</button>
+        </div>
+
+        <div class="profile-panel" id="profilePanel">
+            <h4>&#128100; 个人中心</h4>
+            <button onclick="fetchProfile()" style="
+                margin-bottom:14px;padding:8px 16px;border:none;border-radius:8px;
+                background:rgba(99,102,241,0.18);color:#a5b4fc;cursor:pointer;font-size:13px;">
+                刷新信息
+            </button>
+            <img src="" alt="" class="avatar-display" id="pfAvatar">
+            <div class="profile-info-grid" id="pfInfoGrid"></div>
+            <div class="pf-form-group">
+                <label>修改昵称</label>
+                <input type="text" id="pfNickname" placeholder="新昵称">
+                <button onclick="doUpdateNickname()">保存</button>
+            </div>
+            <div class="pf-form-group">
+                <label>上传头像</label>
+                <input type="file" id="pfAvatarFile" accept="image/*">
+                <button onclick="doUploadAvatar()">上传</button>
+            </div>
+        </div>
+
+        <div id="publicChatArea">
+            <div class="section-row">
+                <span class="section-title">公共聊天室</span>
+                <span class="online-count-badge" id="onlineCount">在线: 0</span>
+            </div>
+            <div class="chat-box" id="pubMsgBox"></div>
+            <div class="chat-input-row">
+                <input type="text" id="pubInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendPubMsg()">
+                <button onclick="sendPubMsg()">发送</button>
+            </div>
+        </div>
+
+        <div id="privateChatArea" class="hidden">
+            <div class="friend-panel">
+                <h5>选择聊天对象</h5>
+                <div class="friend-list-scroll" id="friendListScroll"></div>
+            </div>
+            <div class="section-row">
+                <span class="status-label" id="priTargetLabel">未选择</span>
+                <span class="online-count-badge" id="priStatusDot">离线</span>
+            </div>
+            <div class="chat-box" id="priMsgBox"></div>
+            <div class="chat-input-row">
+                <input type="text" id="priInput" placeholder="输入私信..." onkeypress="if(event.key==='Enter')sendPriMsg()">
+                <button onclick="sendPriMsg()">发送</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const AUTH_PAGE = "index_justtest.html";
+let token = localStorage.getItem("token") || "";
+let currentUsername = localStorage.getItem("username") || "";
+let currentUserUid = null;
+
+let publicWs = null, privateWs = null;
+let priTargetUid = null;
+let currentChatMode = 'public';
+let onlineTimer = null;
+
+function showToast(msg, ok = true) {
+    const existing = document.querySelector('.alert-toast');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.className = `alert-toast ${ok ? 'success' : 'error'}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => {
+        el.style.animation = 'toastOut 0.25s ease forwards';
+        setTimeout(() => el.remove(), 250);
+    }, 3200);
+}
+
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function doLogout() {
+    if (publicWs) { publicWs.close(); publicWs = null; }
+    if (privateWs) { privateWs.close(); privateWs = null; }
+    if (onlineTimer) { clearInterval(onlineTimer); onlineTimer = null; }
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    window.location.href = AUTH_PAGE;
+}
+
+function switchChatType(type) {
+    currentChatMode = type;
+    document.getElementById('pubBtn').classList.toggle('active', type === 'public');
+    document.getElementById('priBtn').classList.toggle('active', type === 'private');
+    document.getElementById('publicChatArea').classList.toggle('hidden', type !== 'public');
+    document.getElementById('privateChatArea').classList.toggle('hidden', type !== 'private');
+    if (type === 'public') { if (!publicWs) initPublicWs(); }
+    else loadFriends();
+}
+
+function toggleProfilePanel() {
+    const p = document.getElementById('profilePanel');
+    p.classList.toggle('show');
+    if (p.classList.contains('show')) fetchProfile();
+}
+
+async function fetchProfile() {
+    if (!token) return null;
+    try {
+        const res = await fetch(`${API}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const d = await res.json();
+        if (!res.ok) {
+            showToast('登录过期了，请重新登录', false);
+            doLogout();
+            return null;
+        }
+        const info = d.data;
+        currentUserUid = info.uid;
+        document.getElementById('pfAvatar').src = info.avatar_access_url || 'https://via.placeholder.com/70';
+        document.getElementById('pfInfoGrid').innerHTML =
+            `<div><strong>UID</strong>${info.uid}</div>` +
+            `<div><strong>用户名</strong>${info.username}</div>` +
+            `<div><strong>昵称</strong>${info.nickname}</div>`;
+        return info;
+    } catch(e) { console.error(e); return null; }
+}
+
+async function doUpdateNickname() {
+    const v = document.getElementById('pfNickname').value.trim();
+    if (!v) return;
+    const r = await fetch(`${API}/user/nickname`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({nickname:v})
+    });
+    const d = await r.json();
+    if(r.ok){ showToast('昵称修改成功'); document.getElementById('pfNickname').value=''; fetchProfile(); }
+    else showToast(d.detail || '修改失败了，稍后再试', false);
+}
+
+async function doUploadAvatar() {
+    const f = document.getElementById('pfAvatarFile').files[0];
+    if(!f) return;
+    const fd = new FormData();
+    fd.append('file', f);
+    const r = await fetch(`${API}/user/avatar`,{
+        method:'POST',
+        headers:{'Authorization':`Bearer ${token}`},
+        body:fd
+    });
+    const d = await r.json();
+    if(r.ok){ showToast('头像上传成功'); fetchProfile(); }
+    else showToast(d.detail || '上传失败了，稍后再试', false);
+}
+
+function initPublicWs() {
+    if(!token){ showToast('请先登录哦', false); doLogout(); return; }
+    if(publicWs){ publicWs.close(); publicWs=null; }
+    if(onlineTimer){ clearInterval(onlineTimer); onlineTimer=null; }
+
+    const wsUrl = `${API.replace('http','ws')}/ws/chat/${token}`;
+    publicWs = new WebSocket(wsUrl);
+
+    publicWs.onopen = () => {
+        showToast('聊天室连接成功');
+        updateOnlineCnt();
+        onlineTimer = setInterval(updateOnlineCnt, 5000);
+    };
+    publicWs.onmessage = e => {
+        const m = JSON.parse(e.data);
+        if(m.type === 'history' && m.messages) m.messages.forEach(renderPubMsg);
+        else renderPubMsg(m);
+    };
+    publicWs.onclose = e => {
+        if(onlineTimer){ clearInterval(onlineTimer); onlineTimer=null; }
+        if(e.code !== 1000){
+            showToast('聊天室断开了，正在自动重连...', false);
+            setTimeout(initPublicWs, 3000);
+        }
+    };
+    publicWs.onerror = () => showToast('聊天室连不上，请检查网络', false);
+}
+
+function renderPubMsg(m){
+    const box = document.getElementById('pubMsgBox');
+    const div = document.createElement('div');
+    if(m.type === 'system'){
+        div.className = 'msg-item sys';
+        div.innerHTML = `<span>${escHtml(m.content)}</span>`;
+    }else{
+        const mine = m.username === currentUsername;
+        div.className = `msg-item ${mine ? 'mine' : 'other'}`;
+        div.innerHTML =
+            `<div class="msg-bubble">${escHtml(m.content)}</div>` +
+            `<div class="msg-meta">${escHtml(m.nickname || m.username)} &middot; ${new Date(m.timestamp).toLocaleTimeString()}</div>`;
+    }
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function sendPubMsg(){
+    const v = document.getElementById('pubInput').value.trim();
+    if(!v){ showToast('还没写内容呢', false); return; }
+    if(!publicWs || publicWs.readyState !== WebSocket.OPEN){
+        showToast('聊天室还没连上哦', false); return;
+    }
+    publicWs.send(JSON.stringify({content:v}));
+    document.getElementById('pubInput').value='';
+}
+
+async function loadFriends(){
+    if(!token) return;
+    try{
+        const r = await fetch(`${API}/chat/online-users`,{headers:{'Authorization':`Bearer ${token}`}});
+        const d = await r.json();
+        const list = document.getElementById('friendListScroll');
+        list.innerHTML='';
+        if(d.data && Array.isArray(d.data)) d.data.forEach(u=>{
+            if(u.uid === currentUserUid) return;
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            item.onclick = () => startPriChat(u.uid, u.nickname || u.username);
+            item.innerHTML =
+                `<img class="friend-avatar-sm" src="${u.avatar_url || 'https://via.placeholder.com/32'}" alt="">` +
+                `<span class="friend-name-text">${escHtml(u.nickname || u.username)}</span>` +
+                `<span class="dot-status dot-on"></span>`;
+            list.appendChild(item);
+        });
+    }catch(e){ console.error(e); }
+}
+
+function startPriChat(uid, name){
+    priTargetUid = uid;
+    document.getElementById('priTargetLabel').textContent = `与 ${escHtml(name)} 私聊`;
+    document.getElementById('priStatusDot').textContent = '在线';
+    document.getElementById('priStatusDot').style.color = '#22c55e';
+    document.getElementById('priMsgBox').innerHTML = '';
+    initPriWs(uid);
+}
+
+function initPriWs(targetUid){
+    if(!token) return;
+    if(privateWs){ privateWs.close(); privateWs=null; }
+    const wsUrl = `${API.replace('http','ws')}/ws/private-chat/${token}/${targetUid}`;
+    privateWs = new WebSocket(wsUrl);
+    privateWs.onopen = () => showToast('私聊连接成功');
+    privateWs.onmessage = e => renderPriMsg(JSON.parse(e.data));
+    privateWs.onclose = e => {
+        if(e.code !== 1000){
+            showToast('私聊断开了，正在自动重连...', false);
+            setTimeout(() => initPriWs(targetUid), 3000);
+        }
+    };
+    privateWs.onerror = () => showToast('私聊连不上，请检查网络', false);
+}
+
+function renderPriMsg(m){
+    const box = document.getElementById('priMsgBox');
+    const div = document.createElement('div');
+    if(m.type === 'system'){
+        div.className = 'msg-item sys';
+        div.innerHTML = `<span>${escHtml(m.content)}</span>`;
+    }else{
+        const mine = m.from_uid === currentUserUid;
+        div.className = `msg-item ${mine ? 'mine' : 'other'}`;
+        div.innerHTML =
+            `<div class="msg-bubble">${escHtml(m.content)}</div>` +
+            `<div class="msg-meta">${escHtml(m.from_nickname || m.from_username)} &middot; ${new Date(m.timestamp).toLocaleTimeString()}</div>`;
+    }
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function sendPriMsg(){
+    if(!priTargetUid){ showToast('请先在左边选一个聊天对象哦', false); return; }
+    const v = document.getElementById('priInput').value.trim();
+    if(!v) return;
+    if(!privateWs || privateWs.readyState !== WebSocket.OPEN){
+        showToast('私聊还没连上呢', false); return;
+    }
+    privateWs.send(JSON.stringify({content:v,to_uid:priTargetUid}));
+    document.getElementById('priInput').value='';
+}
+
+async function updateOnlineCnt(){
+    try{
+        const r = await fetch(`${API}/chat/online-users`,{headers:{'Authorization':`Bearer ${token}`}});
+        const d = await r.json();
+        document.getElementById('onlineCount').textContent = `在线: ${(d.data||[]).length}`;
+    }catch(e){}
+}
+
+window.onload = async () => {
+    if (!token) {
+        window.location.href = AUTH_PAGE;
+        return;
+    }
+    const info = await fetchProfile();
+    if (!info) return;
+    initPublicWs();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户认证系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #0c0e1a 0%, #1a1a3e 30%, #0d1b2a 60%, #1b263b 100%);
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        .particles {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+        .particle {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle, rgba(99,102,241,0.6) 0%, transparent 70%);
+            animation: floatParticle linear infinite;
+        }
+        @keyframes floatParticle {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+        }
+
+        .glow-orb {
+            position: fixed; border-radius: 50%; filter: blur(80px);
+            animation: orbFloat ease-in-out infinite;
+            pointer-events: none; z-index: 0;
+        }
+        .orb-1 { width: 400px; height: 400px; background: rgba(99,102,241,0.15); top: -100px; left: -100px; animation-duration: 8s; }
+        .orb-2 { width: 350px; height: 350px; background: rgba(236,72,153,0.12); bottom: -80px; right: -80px; animation-duration: 10s; animation-delay: -3s; }
+        .orb-3 { width: 250px; height: 250px; background: rgba(34,211,238,0.1); top: 50%; left: 50%; transform: translate(-50%, -50%); animation-duration: 12s; animation-delay: -5s; }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -20px) scale(1.05); }
+            50% { transform: translate(-20px, 30px) scale(0.95); }
+            75% { transform: translate(20px, 20px) scale(1.02); }
+        }
+
+        .auth-container {
+            position: relative; z-index: 10;
+            width: 440px; max-width: 90vw;
+            perspective: 1200px;
+        }
+        .auth-card {
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 24px;
+            padding: 45px 40px 38px;
+            box-shadow:
+                0 32px 64px rgba(0,0,0,0.4),
+                0 0 0 1px rgba(255,255,255,0.05) inset,
+                0 1px 0 rgba(255,255,255,0.1) inset;
+            animation: cardEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .auth-card:hover {
+            box-shadow:
+                0 36px 72px rgba(0,0,0,0.5),
+                0 0 60px rgba(99,102,241,0.08),
+                0 0 0 1px rgba(255,255,255,0.08) inset,
+                0 1px 0 rgba(255,255,255,0.15) inset;
+        }
+        @keyframes cardEntrance {
+            from { opacity: 0; transform: translateY(40px) rotateX(-10deg) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) rotateX(0) scale(1); }
+        }
+
+        .logo-area { text-align: center; margin-bottom: 32px; }
+        .logo-icon {
+            width: 56px; height: 56px; margin: 0 auto 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; color: white;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.35);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+            50% { box-shadow: 0 8px 36px rgba(99,102,241,0.55), 0 0 48px rgba(139,92,246,0.15); }
+        }
+        .logo-title {
+            font-size: 24px; font-weight: 700; color: #fff;
+            letter-spacing: 1px;
+        }
+        .logo-subtitle {
+            font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 6px;
+        }
+
+        .tab-switcher {
+            display: flex; background: rgba(255,255,255,0.04);
+            border-radius: 12px; padding: 4px; margin-bottom: 28px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: none;
+            color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600;
+            border-radius: 9px; cursor: pointer; transition: all 0.3s ease;
+            position: relative;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+        }
+        .tab-btn:not(.active):hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); }
+
+        .form-panel { display: none; animation: fadeSlideIn 0.4s ease both; }
+        .form-panel.active { display: block; }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateX(12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .form-group { margin-bottom: 18px; position: relative; }
+        .form-label {
+            display: block; font-size: 13px; font-weight: 600;
+            color: rgba(255,255,255,0.6); margin-bottom: 7px;
+            letter-spacing: 0.3px;
+        }
+        .form-input {
+            width: 100%; padding: 13px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 11px; color: #fff; font-size: 15px;
+            transition: all 0.3s ease; outline: none;
+        }
+        .form-input::placeholder { color: rgba(255,255,255,0.25); }
+        .form-input:focus {
+            border-color: rgba(99,102,241,0.5);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 0 20px rgba(99,102,241,0.08);
+        }
+
+        .captcha-row {
+            display: flex; gap: 10px; align-items: stretch;
+        }
+        .captcha-row .form-input { flex: 1; }
+        .captcha-img-wrap {
+            width: 110px; height: 47px; border-radius: 11px; overflow: hidden;
+            cursor: pointer; position: relative; border: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0; transition: all 0.3s ease;
+        }
+        .captcha-img-wrap:hover { border-color: rgba(99,102,241,0.4); }
+        .captcha-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .captcha-refresh-hint {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.6);
+            font-size: 10px; text-align: center; padding: 2px 0;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .captcha-img-wrap:hover .captcha-refresh-hint { opacity: 1; }
+
+        .submit-btn {
+            width: 100%; padding: 14px; margin-top: 6px;
+            border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white; font-size: 16px; font-weight: 700;
+            cursor: pointer; letter-spacing: 1px;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+            box-shadow: 0 6px 24px rgba(99,102,241,0.35);
+        }
+        .submit-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px rgba(99,102,241,0.5);
+        }
+        .submit-btn:hover::before { left: 100%; }
+        .submit-btn:active { transform: translateY(0); box-shadow: 0 4px 16px rgba(99,102,241,0.35); }
+
+        .forgot-link {
+            text-align: right; margin-top: 8px;
+        }
+        .forgot-link a {
+            color: rgba(99,102,241,0.7); font-size: 13px;
+            text-decoration: none; cursor: pointer; transition: all 0.2s;
+        }
+        .forgot-link a:hover { color: #818cf8; text-decoration: underline; }
+
+        .back-login {
+            text-align: center; margin-top: 18px;
+        }
+        .back-login a {
+            color: rgba(255,255,255,0.4); font-size: 13px;
+            text-decoration: none; cursor: pointer; transition: all 0.2s;
+        }
+        .back-login a:hover { color: rgba(255,255,255,0.7); }
+
+        .alert-msg {
+            padding: 12px 16px; border-radius: 10px; margin-bottom: 18px;
+            font-size: 13px; font-weight: 500; display: none;
+            animation: alertSlide 0.3s ease both;
+        }
+        @keyframes alertSlide {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .alert-msg.success { display: block; background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+        .alert-msg.error { display: block; background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+        .input-glow-line {
+            position: absolute; bottom: 0; left: 50%;
+            width: 0; height: 2px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+            border-radius: 1px; transition: width 0.4s ease, left 0.4s ease;
+            pointer-events: none;
+        }
+        .form-group:focus-within .input-glow-line { width: 100%; left: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+    <div class="particles" id="particles"></div>
+
+    <div id="authPage" class="auth-container">
+        <div class="auth-card">
+            <div class="alert-msg" id="messageAlert"></div>
+
+            <div class="logo-area">
+                <div class="logo-icon">&#9733;</div>
+                <div class="logo-title">欢迎回来</div>
+                <div class="logo-subtitle">登录以继续您的旅程</div>
+            </div>
+
+            <div class="tab-switcher">
+                <button class="tab-btn active" data-tab="login" onclick="switchTab('login')">登录</button>
+                <button class="tab-btn" data-tab="register" onclick="switchTab('register')">注册</button>
+                <button class="tab-btn" data-tab="forgot" onclick="switchTab('forgot')">找回密码</button>
+            </div>
+
+            <div class="form-panel active" id="panel-login">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" id="login-username" placeholder="请输入用户名" autocomplete="username">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="请输入密码" autocomplete="current-password">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图形验证码</label>
+                    <div class="captcha-row">
+                        <input type="text" class="form-input" id="login-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
+                        <div class="captcha-img-wrap" onclick="refreshCaptcha('login')" title="点击刷新验证码">
+                            <img id="login-captcha-img" src="" alt="验证码">
+                            <span class="captcha-refresh-hint">点击刷新</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="forgot-link"><a onclick="switchTab('forgot')">忘记密码？</a></div>
+                <button class="submit-btn" onclick="doLogin()">登 录</button>
+            </div>
+
+            <div class="form-panel" id="panel-register">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" id="reg-username" placeholder="3-20位字母或数字" autocomplete="new-username">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="reg-password" placeholder="至少6位密码" autocomplete="new-password">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">昵称（可选）</label>
+                    <input type="text" class="form-input" id="reg-nickname" placeholder="给自己起个名字" autocomplete="off">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图形验证码</label>
+                    <div class="captcha-row">
+                        <input type="text" class="form-input" id="reg-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
+                        <div class="captcha-img-wrap" onclick="refreshCaptcha('reg')" title="点击刷新验证码">
+                            <img id="reg-captcha-img" src="" alt="验证码">
+                            <span class="captcha-refresh-hint">点击刷新</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="submit-btn" onclick="doRegister()">注 册</button>
+            </div>
+
+            <div class="form-panel" id="panel-forgot">
+                <div class="form-group">
+                    <label class="form-label">账号（用户名）</label>
+                    <input type="text" class="form-input" id="forgot-username" placeholder="请输入注册的用户名">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密码</label>
+                    <input type="password" class="form-input" id="forgot-newpwd" placeholder="设置新密码（至少6位）">
+                    <div class="input-glow-line"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图形验证码</label>
+                    <div class="captcha-row">
+                        <input type="text" class="form-input" id="forgot-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
+                        <div class="captcha-img-wrap" onclick="refreshCaptcha('forgot')" title="点击刷新验证码">
+                            <img id="forgot-captcha-img" src="" alt="验证码">
+                            <span class="captcha-refresh-hint">点击刷新</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="submit-btn" onclick="doForgotPassword()">重置密码</button>
+                <div class="back-login"><a onclick="switchTab('login')">&larr; 返回登录</a></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const CHAT_PAGE = "chat.html";
+let captchaIds = { login: '', register: '', forgot: '' };
+
+function initParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 6 + 2;
+        p.style.width = size + 'px'; p.style.height = size + 'px';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+        p.style.animationDelay = (Math.random() * 15) + 's';
+        container.appendChild(p);
+    }
+}
+initParticles();
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`panel-${tabName}`).classList.add('active');
+
+    const logoSub = document.querySelector('.logo-subtitle');
+    if (tabName === 'login') logoSub.textContent = '登录以继续您的旅程';
+    else if (tabName === 'register') logoSub.textContent = '创建一个新账号';
+    else logoSub.textContent = '通过验证重置您的密码';
+
+    refreshCaptcha(tabName === 'forgot' ? 'forgot' : (tabName === 'register' ? 'reg' : 'login'));
+}
+
+async function refreshCaptcha(which) {
+    try {
+        const res = await fetch(`${API}/captcha`);
+        if (!res.ok) return;
+        const captchaId = res.headers.get('X-Captcha-Id');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const keyMap = { login: 'login', register: 'reg', reg: 'reg', forgot: 'forgot' };
+        const key = keyMap[which] || which;
+
+        const imgEl = document.getElementById(`${key}-captcha-img`);
+        if (imgEl) imgEl.src = url;
+        else return;
+
+        captchaIds[key] = captchaId;
+    } catch(e) { console.error(e); }
+}
+
+function translateError(raw) {
+    const map = {
+        '用户名或密码错误':          '账号或密码不对哦，请重新输入',
+        '用户名已存在':              '这个用户名已经被注册啦，换一个试试',
+        '用户不存在':                '没找到这个账号，请确认用户名是否正确',
+        '验证码错误或已过期':         '验证码不对或过期了，点图片刷新一下重填',
+        '用户名长度3-20位':           '用户名需要3到20个字符（字母或数字）',
+        '用户名只能包含字母和数字':   '用户名只能用英文字母和数字，不能有特殊符号',
+        '密码至少6位':               '密码太短了，至少要6个字符哦',
+        '新密码至少6位':             '新密码太短了，至少要6个字符哦',
+        '昵称不能为空':              '昵称不能留空，随便写一个吧',
+        '无效凭证，重新登录':        '登录过期了，请重新登录',
+    };
+    return map[raw] || (raw.length > 30 ? '操作失败了，请稍后再试' : raw);
+}
+
+function showAlert(msg, ok = true) {
+    const el = document.getElementById('messageAlert');
+    el.textContent = msg;
+    el.className = `alert-msg ${ok ? 'success' : 'error'}`;
+    setTimeout(() => { el.className = 'alert-msg'; }, 4000);
+}
+
+function goToChat(token, username) {
+    localStorage.setItem("token", token);
+    localStorage.setItem("username", username);
+    window.location.href = CHAT_PAGE;
+}
+
+async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (!username || !password) { showAlert('用户名和密码都要填哦', false); return; }
+
+    try {
+        const res = await fetch(`${API}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, captcha_id: 'skip', captcha_text: 'skip' })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert('登录成功！');
+            goToChat(data.access_token, username);
+        } else {
+            showAlert(translateError(data.detail) || '登录失败了，请稍后再试', false);
+        }
+    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+}
+
+async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const nickname = document.getElementById('reg-nickname').value.trim();
+
+    if (!username || !password) { showAlert('用户名和密码都要填哦', false); return; }
+
+    try {
+        const res = await fetch(`${API}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, nickname: nickname || undefined, captcha_id: 'skip', captcha_text: 'skip' })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert('注册成功！请登录');
+            ['reg-username','reg-password','reg-nickname'].forEach(id => document.getElementById(id).value = '');
+            setTimeout(() => switchTab('login'), 1200);
+        } else {
+            showAlert(translateError(data.detail) || '注册失败了，请稍后再试', false);
+        }
+    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+}
+
+async function doForgotPassword() {
+    const username = document.getElementById('forgot-username').value.trim();
+    const newPassword = document.getElementById('forgot-newpwd').value;
+
+    if (!username || !newPassword) { showAlert('账号和新密码都要填哦', false); return; }
+
+    try {
+        const res = await fetch(`${API}/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, new_password: newPassword, captcha_id: 'skip', captcha_text: 'skip' })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert('密码重置成功！请使用新密码登录');
+            ['forgot-username','forgot-newpwd'].forEach(id => document.getElementById(id).value = '');
+            setTimeout(() => switchTab('login'), 1500);
+        } else {
+            showAlert(translateError(data.detail) || '重置失败了，请稍后再试', false);
+        }
+    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+}
+
+window.onload = () => refreshCaptcha('login');
+</script>
+</body>
+</html>
