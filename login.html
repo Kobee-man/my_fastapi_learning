@@ -3,118 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户认证系统</title>
+    <title>用户认证系统 - 🐱</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             min-height: 100vh;
             display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #0c0e1a 0%, #1a1a3e 30%, #0d1b2a 60%, #1b263b 100%);
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 50%, #dfe4ed 100%);
             font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
+            position: relative;
         }
 
-        .particles {
+        .bg-pattern {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0.03;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #6366f1 2px, transparent 2px),
+                radial-gradient(circle at 75% 75%, #8b5cf6 2px, transparent 2px);
+            background-size: 60px 60px, 80px 80px;
             pointer-events: none; z-index: 0;
-        }
-        .particle {
-            position: absolute; border-radius: 50%;
-            background: radial-gradient(circle, rgba(99,102,241,0.6) 0%, transparent 70%);
-            animation: floatParticle linear infinite;
-        }
-        @keyframes floatParticle {
-            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
         }
 
-        .glow-orb {
-            position: fixed; border-radius: 50%; filter: blur(80px);
-            animation: orbFloat ease-in-out infinite;
-            pointer-events: none; z-index: 0;
+        .floating-shapes {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
         }
-        .orb-1 { width: 400px; height: 400px; background: rgba(99,102,241,0.15); top: -100px; left: -100px; animation-duration: 8s; }
-        .orb-2 { width: 350px; height: 350px; background: rgba(236,72,153,0.12); bottom: -80px; right: -80px; animation-duration: 10s; animation-delay: -3s; }
-        .orb-3 { width: 250px; height: 250px; background: rgba(34,211,238,0.1); top: 50%; left: 50%; transform: translate(-50%, -50%); animation-duration: 12s; animation-delay: -5s; }
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(30px, -20px) scale(1.05); }
-            50% { transform: translate(-20px, 30px) scale(0.95); }
-            75% { transform: translate(20px, 20px) scale(1.02); }
+        
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: floatShape ease-in-out infinite;
+        }
+        .shape-1 { 
+            width: 300px; height: 300px; 
+            background: rgba(99,102,241,0.08); 
+            top: -100px; right: -50px; 
+            animation-duration: 12s; 
+        }
+        .shape-2 { 
+            width: 250px; height: 250px; 
+            background: rgba(139,92,246,0.06); 
+            bottom: -80px; left: -60px; 
+            animation-duration: 15s; animation-delay: -3s; 
+        }
+        .shape-3 { 
+            width: 200px; height: 200px; 
+            background: rgba(236,72,153,0.05); 
+            top: 40%; left: 30%; 
+            animation-duration: 18s; animation-delay: -7s; 
+        }
+        @keyframes floatShape {
+            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            33% { transform: translate(20px, -15px) scale(1.08) rotate(5deg); }
+            66% { transform: translate(-15px, 10px) scale(0.95) rotate(-3deg); }
         }
 
         .auth-container {
             position: relative; z-index: 10;
-            width: 440px; max-width: 90vw;
+            width: 420px; max-width: 90vw;
             perspective: 1200px;
         }
+        
         .auth-card {
-            background: rgba(255,255,255,0.04);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255,255,255,0.9);
             border-radius: 24px;
-            padding: 45px 40px 38px;
+            padding: 48px 42px 40px;
             box-shadow:
-                0 32px 64px rgba(0,0,0,0.4),
-                0 0 0 1px rgba(255,255,255,0.05) inset,
-                0 1px 0 rgba(255,255,255,0.1) inset;
+                0 8px 32px rgba(99,102,241,0.12),
+                0 2px 8px rgba(0,0,0,0.04),
+                0 0 0 1px rgba(99,102,241,0.04) inset,
+                0 1px 0 rgba(255,255,255,0.8) inset;
             animation: cardEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .auth-card:hover {
             box-shadow:
-                0 36px 72px rgba(0,0,0,0.5),
-                0 0 60px rgba(99,102,241,0.08),
-                0 0 0 1px rgba(255,255,255,0.08) inset,
-                0 1px 0 rgba(255,255,255,0.15) inset;
+                0 12px 48px rgba(99,102,241,0.18),
+                0 4px 16px rgba(0,0,0,0.06),
+                0 0 0 1px rgba(99,102,241,0.06) inset,
+                0 1px 0 rgba(255,255,255,0.9) inset;
+            transform: translateY(-2px);
         }
         @keyframes cardEntrance {
             from { opacity: 0; transform: translateY(40px) rotateX(-10deg) scale(0.96); }
             to { opacity: 1; transform: translateY(0) rotateX(0) scale(1); }
         }
 
-        .logo-area { text-align: center; margin-bottom: 32px; }
-        .logo-icon {
-            width: 56px; height: 56px; margin: 0 auto 14px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 26px; color: white;
-            box-shadow: 0 8px 24px rgba(99,102,241,0.35);
-            animation: logoPulse 3s ease-in-out infinite;
+        /* 可爱的卡通猫头像区域 */
+        .cat-avatar-container {
+            text-align: center; margin-bottom: 32px; position: relative;
         }
-        @keyframes logoPulse {
-            0%, 100% { box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
-            50% { box-shadow: 0 8px 36px rgba(99,102,241,0.55), 0 0 48px rgba(139,92,246,0.15); }
+        .cat-avatar-wrapper {
+            position: relative; display: inline-block;
+            cursor: pointer; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        .cat-avatar-wrapper:hover { transform: scale(1.05) rotate(-3deg); }
+        
+        .cat-svg {
+            width: 120px; height: 120px;
+            filter: drop-shadow(0 8px 20px rgba(99,102,241,0.25));
+            transition: filter 0.3s ease;
+        }
+        .cat-avatar-wrapper:hover .cat-svg {
+            filter: drop-shadow(0 12px 28px rgba(99,102,241,0.35));
+        }
+
+        /* 猫的眼睛系统 - 完整重构 */
+        .eye-container {
+            overflow: visible;
+        }
+        
+        .eyeball-white {
+            transition: all 0.3s ease;
+        }
+        
+        .pupil-group {
+            transition: transform 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+        
+        .pupil {
+            transition: fill 0.2s ease;
+        }
+        
+        .highlight-main, .highlight-sub {
+            transition: opacity 0.2s ease;
+        }
+        
+        /* 眼皮 - 默认隐藏 */
+        .eyelid {
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+        
+        .eyelid-top {
+            transform: translateY(-8px);
+        }
+        
+        .eyelid-bottom {
+            transform: translateY(8px);
+        }
+
+        /* 闭眼状态 - 眼皮合拢 */
+        .cat-avatar.blinking .eyelid-top {
+            opacity: 1;
+            transform: translateY(6px);
+        }
+        
+        .cat-avatar.blinking .eyelid-bottom {
+            opacity: 1;
+            transform: translateY(-6px);
+        }
+        
+        .cat-avatar.blinking .pupil-group {
+            opacity: 0.15;
+            transform: scale(0.7);
+        }
+        
+        .cat-avatar.blinking .highlight-main,
+        .cat-avatar.blinking .highlight-sub {
+            opacity: 0;
+        }
+
         .logo-title {
-            font-size: 24px; font-weight: 700; color: #fff;
-            letter-spacing: 1px;
+            font-size: 26px; font-weight: 700; color: #1a202c;
+            letter-spacing: 0.5px; margin-top: 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .logo-subtitle {
-            font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 6px;
+            font-size: 13px; color: #718096; margin-top: 6px; font-weight: 400;
         }
 
         .tab-switcher {
-            display: flex; background: rgba(255,255,255,0.04);
+            display: flex; background: #f7fafc;
             border-radius: 12px; padding: 4px; margin-bottom: 28px;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid #e2e8f0;
         }
         .tab-btn {
-            flex: 1; padding: 10px; border: none; background: none;
-            color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600;
-            border-radius: 9px; cursor: pointer; transition: all 0.3s ease;
+            flex: 1; padding: 11px; border: none; background: none;
+            color: #718096; font-size: 14px; font-weight: 600;
+            border-radius: 9px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
         .tab-btn.active {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
-            box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+            transform: translateY(-1px);
         }
-        .tab-btn:not(.active):hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); }
+        .tab-btn:not(.active):hover { 
+            color: #4a5568; background: #edf2f7; 
+        }
 
         .form-panel { display: none; animation: fadeSlideIn 0.4s ease both; }
         .form-panel.active { display: block; }
@@ -122,36 +210,43 @@
             from { opacity: 0; transform: translateX(12px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        .form-group { margin-bottom: 18px; position: relative; }
+        
+        .form-group { margin-bottom: 20px; position: relative; }
         .form-label {
             display: block; font-size: 13px; font-weight: 600;
-            color: rgba(255,255,255,0.6); margin-bottom: 7px;
+            color: #4a5568; margin-bottom: 8px;
             letter-spacing: 0.3px;
         }
         .form-input {
-            width: 100%; padding: 13px 16px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 11px; color: #fff; font-size: 15px;
-            transition: all 0.3s ease; outline: none;
+            width: 100%; padding: 14px 16px;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 11px; color: #2d3748; font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); outline: none;
         }
-        .form-input::placeholder { color: rgba(255,255,255,0.25); }
+        .form-input::placeholder { color: #a0aec0; }
         .form-input:focus {
-            border-color: rgba(99,102,241,0.5);
-            background: rgba(255,255,255,0.08);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 0 20px rgba(99,102,241,0.08);
+            border-color: #6366f1;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.08), 0 4px 12px rgba(99,102,241,0.1);
+            transform: translateY(-1px);
         }
 
+        /* 滑块验证组件 - 浅色主题 */
         .slider-verify {
             position: relative;
             width: 100%;
-            height: 48px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 11px;
+            height: 50px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
             overflow: hidden;
             user-select: none;
             margin-top: 4px;
+            transition: border-color 0.3s ease;
+        }
+        .slider-verify:focus-within {
+            border-color: #6366f1;
         }
         .slider-verify-bg {
             position: absolute;
@@ -159,49 +254,50 @@
             width: 0;
             background: linear-gradient(90deg, #6366f1, #8b5cf6);
             transition: width 0.1s ease-out;
-            border-radius: 11px 0 0 11px;
+            border-radius: 10px 0 0 10px;
         }
         .slider-verify.success .slider-verify-bg {
             background: linear-gradient(90deg, #22c55e, #4ade80);
-            border-radius: 11px;
+            border-radius: 10px;
         }
         .slider-verify-text {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.45);
+            color: #a0aec0;
             font-size: 13px;
             font-weight: 500;
             pointer-events: none;
             white-space: nowrap;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
             z-index: 1;
         }
         .slider-verify.success .slider-verify-text {
             color: white;
-            opacity: 1;
+            font-weight: 600;
         }
         .slider-verify-btn {
             position: absolute;
             top: 4px; left: 4px;
-            width: 40px; height: 40px;
-            background: linear-gradient(135deg, #fff, #f3f4f6);
-            border: none;
-            border-radius: 8px;
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, #fff, #f7fafc);
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
             cursor: grab;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
             color: #6366f1;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1) inset;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.8) inset;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
             z-index: 2;
             touch-action: none;
         }
         .slider-verify-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+            transform: scale(1.08);
+            box-shadow: 0 4px 16px rgba(99,102,241,0.25), 0 0 0 1px rgba(255,255,255,0.9) inset;
+            border-color: #c7d2fe;
         }
         .slider-verify-btn:active {
             cursor: grabbing;
@@ -209,6 +305,7 @@
         }
         .slider-verify.success .slider-verify-btn {
             background: linear-gradient(135deg, #22c55e, #4ade80);
+            border-color: #22c55e;
             color: white;
             cursor: default;
         }
@@ -229,56 +326,76 @@
         }
 
         .submit-btn {
-            width: 100%; padding: 14px; margin-top: 6px;
+            width: 100%; padding: 15px; margin-top: 8px;
             border: none; border-radius: 12px;
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white; font-size: 16px; font-weight: 700;
             cursor: pointer; letter-spacing: 1px;
-            transition: all 0.3s ease; position: relative; overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; overflow: hidden;
             box-shadow: 0 6px 24px rgba(99,102,241,0.35);
         }
         .submit-btn::before {
             content: ''; position: absolute; top: 0; left: -100%;
             width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.5s ease;
         }
         .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 32px rgba(99,102,241,0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 32px rgba(99,102,241,0.45);
         }
         .submit-btn:hover::before { left: 100%; }
-        .submit-btn:active { transform: translateY(0); box-shadow: 0 4px 16px rgba(99,102,241,0.35); }
+        .submit-btn:active { 
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 16px rgba(99,102,241,0.35); 
+        }
 
         .forgot-link {
-            text-align: right; margin-top: 8px;
+            text-align: right; margin-top: 10px;
         }
         .forgot-link a {
-            color: rgba(99,102,241,0.7); font-size: 13px;
-            text-decoration: none; cursor: pointer; transition: all 0.2s;
+            color: #6366f1; font-size: 13px;
+            text-decoration: none; cursor: pointer; 
+            font-weight: 500; transition: all 0.2s;
         }
-        .forgot-link a:hover { color: #818cf8; text-decoration: underline; }
+        .forgot-link a:hover { 
+            color: #4f46e5; 
+            text-decoration: underline;
+        }
 
         .back-login {
-            text-align: center; margin-top: 18px;
+            text-align: center; margin-top: 20px;
         }
         .back-login a {
-            color: rgba(255,255,255,0.4); font-size: 13px;
-            text-decoration: none; cursor: pointer; transition: all 0.2s;
+            color: #718096; font-size: 13px;
+            text-decoration: none; cursor: pointer; 
+            transition: all 0.2s; font-weight: 500;
         }
-        .back-login a:hover { color: rgba(255,255,255,0.7); }
+        .back-login a:hover { color: #4a5568; }
 
         .alert-msg {
-            padding: 12px 16px; border-radius: 10px; margin-bottom: 18px;
+            padding: 14px 18px; border-radius: 11px; margin-bottom: 20px;
             font-size: 13px; font-weight: 500; display: none;
             animation: alertSlide 0.3s ease both;
+            border: 1px solid;
         }
         @keyframes alertSlide {
             from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .alert-msg.success { display: block; background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
-        .alert-msg.error { display: block; background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+        .alert-msg.success { 
+            display: block; 
+            background: rgba(34,197,94,0.08); 
+            color: #15803d; 
+            border-color: rgba(34,197,94,0.2);
+        }
+        .alert-msg.error { 
+            display: block; 
+            background: rgba(239,68,68,0.08); 
+            color: #dc2626; 
+            border-color: rgba(239,68,68,0.2);
+        }
 
         .input-glow-line {
             position: absolute; bottom: 0; left: 50%;
@@ -288,23 +405,154 @@
             pointer-events: none;
         }
         .form-group:focus-within .input-glow-line { width: 100%; left: 0; }
+
+        /* 呼吸动画效果 */
+        @keyframes catBreathe {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.02); }
+        }
+        .cat-body {
+            transform-origin: bottom center;
+            animation: catBreathe 3s ease-in-out infinite;
+        }
+
+        /* 尾巴摇摆 */
+        @keyframes tailWag {
+            0%, 100% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+        }
+        .cat-tail {
+            transform-origin: left center;
+            animation: tailWag 2s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
 
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
-    <div class="glow-orb orb-3"></div>
-    <div class="particles" id="particles"></div>
+    <div class="bg-pattern"></div>
+    
+    <div class="floating-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
 
     <div id="authPage" class="auth-container">
         <div class="auth-card">
             <div class="alert-msg" id="messageAlert"></div>
 
-            <div class="logo-area">
-                <div class="logo-icon">&#9733;</div>
-                <div class="logo-title">欢迎回来</div>
-                <div class="logo-subtitle">登录以继续您的旅程</div>
+            <!-- 可爱的卡通猫头像 -->
+            <div class="cat-avatar-container">
+                <div class="cat-avatar-wrapper" id="catAvatarWrapper">
+                    <svg class="cat-svg cat-avatar" id="catAvatar" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- 猫的身体 -->
+                        <g class="cat-body">
+                            <!-- 脸部 -->
+                            <ellipse cx="100" cy="110" rx="70" ry="65" fill="#FBBF24"/>
+                            
+                            <!-- 内部脸部 -->
+                            <ellipse cx="100" cy="115" rx="58" ry="52" fill="#FEF3C7"/>
+                            
+                            <!-- 左耳 -->
+                            <path d="M 35 75 L 25 25 Q 35 20 50 55 Z" fill="#FBBF24"/>
+                            <path d="M 38 70 L 32 35 Q 38 33 47 56 Z" fill="#FDE68A"/>
+                            
+                            <!-- 右耳 -->
+                            <path d="M 165 75 L 175 25 Q 165 20 150 55 Z" fill="#FBBF24"/>
+                            <path d="M 162 70 L 168 35 Q 162 33 153 56 Z" fill="#FDE68A"/>
+                            
+                            <!-- 左眼睛 - 完整重构 -->
+                            <g class="eye-container" id="leftEyeContainer" transform="translate(72, 105)">
+                                <!-- 眼白（基础层） -->
+                                <ellipse class="eyeball-white" cx="0" cy="0" rx="18" ry="20" fill="white"/>
+                                
+                                <!-- 瞳孔组（可独立移动） -->
+                                <g class="pupil-group" id="leftPupilGroup">
+                                    <!-- 瞳孔 -->
+                                    <ellipse class="pupil" cx="2" cy="2" rx="10" ry="11" fill="#1a202c"/>
+                                    
+                                    <!-- 内圈（增加深度） -->
+                                    <ellipse cx="2" cy="2" rx="6" ry="7" fill="#2d3748"/>
+                                    
+                                    <!-- 主高光 -->
+                                    <circle class="highlight-main" cx="6" cy="-2" r="4.5" fill="white"/>
+                                    
+                                    <!-- 次高光 -->
+                                    <circle class="highlight-sub" cx="-1" cy="4" r="2" fill="white" opacity="0.7"/>
+                                </g>
+                                
+                                <!-- 眼皮（闭眼时使用） -->
+                                <ellipse class="eyelid eyelid-top" cx="0" cy="-10" rx="19" ry="12" fill="#FBBF24"/>
+                                <ellipse class="eyelid eyelid-bottom" cx="0" cy="10" rx="19" ry="12" fill="#FBBF24"/>
+                                
+                                <!-- 上眼睑线条 -->
+                                <path class="eye-outline" d="M -17 -6 Q 0 -22 17 -6" stroke="#D97706" stroke-width="1.5" fill="none" opacity="0.3"/>
+                            </g>
+                            
+                            <!-- 右眼睛 - 完整重构 -->
+                            <g class="eye-container" id="rightEyeContainer" transform="translate(128, 105)">
+                                <!-- 眼白（基础层） -->
+                                <ellipse class="eyeball-white" cx="0" cy="0" rx="18" ry="20" fill="white"/>
+                                
+                                <!-- 瞳孔组（可独立移动） -->
+                                <g class="pupil-group" id="rightPupilGroup">
+                                    <!-- 瞳孔 -->
+                                    <ellipse class="pupil" cx="-2" cy="2" rx="10" ry="11" fill="#1a202c"/>
+                                    
+                                    <!-- 内圈（增加深度） -->
+                                    <ellipse cx="-2" cy="2" rx="6" ry="7" fill="#2d3748"/>
+                                    
+                                    <!-- 主高光 -->
+                                    <circle class="highlight-main" cx="2" cy="-2" r="4.5" fill="white"/>
+                                    
+                                    <!-- 次高光 -->
+                                    <circle class="highlight-sub" cx="-5" cy="4" r="2" fill="white" opacity="0.7"/>
+                                </g>
+                                
+                                <!-- 眼皮（闭眼时使用） -->
+                                <ellipse class="eyelid eyelid-top" cx="0" cy="-10" rx="19" ry="12" fill="#FBBF24"/>
+                                <ellipse class="eyelid eyelid-bottom" cx="0" cy="10" rx="19" ry="12" fill="#FBBF24"/>
+                                
+                                <!-- 上眼睑线条 -->
+                                <path class="eye-outline" d="M -17 -6 Q 0 -22 17 -6" stroke="#D97706" stroke-width="1.5" fill="none" opacity="0.3"/>
+                            </g>
+                            
+                            <!-- 鼻子 -->
+                            <ellipse cx="100" cy="130" rx="8" ry="6" fill="#FB7185"/>
+                            
+                            <!-- 嘴巴 -->
+                            <path d="M 88 138 Q 100 148 112 138" stroke="#92400E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                            <path d="M 100 138 L 100 144" stroke="#92400E" stroke-width="2" stroke-linecap="round"/>
+                            
+                            <!-- 胡须 -->
+                            <g stroke="#92400E" stroke-width="1.5" stroke-linecap="round" opacity="0.6">
+                                <!-- 左边胡须 -->
+                                <line x1="45" y1="125" x2="20" y2="120"/>
+                                <line x1="43" y1="133" x2="18" y2="134"/>
+                                <line x1="45" y1="141" x2="22" y2="148"/>
+                                
+                                <!-- 右边胡须 -->
+                                <line x1="155" y1="125" x2="180" y2="120"/>
+                                <line x1="157" y1="133" x2="182" y2="134"/>
+                                <line x1="155" y1="141" x2="178" y2="148"/>
+                            </g>
+                            
+                            <!-- 腮红 -->
+                            <ellipse cx="55" cy="125" rx="12" ry="8" fill="#FCA5A5" opacity="0.4"/>
+                            <ellipse cx="145" cy="125" rx="12" ry="8" fill="#FCA5A5" opacity="0.4"/>
+                        </g>
+                        
+                        <!-- 尾巴 -->
+                        <g class="cat-tail">
+                            <path d="M 160 160 Q 185 155 190 140 Q 195 125 188 115" 
+                                  stroke="#FBBF24" stroke-width="12" fill="none" stroke-linecap="round"/>
+                            <path d="M 188 115 Q 192 108 188 102" 
+                                  stroke="#FDE68A" stroke-width="8" fill="none" stroke-linecap="round"/>
+                        </g>
+                    </svg>
+                </div>
+                <h1 class="logo-title">欢迎回来</h1>
+                <p class="logo-subtitle">登录以继续您的旅程 🐱</p>
             </div>
 
             <div class="tab-switcher">
@@ -321,7 +569,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">密码</label>
-                    <input type="password" class="form-input" id="login-password" placeholder="请输入密码" autocomplete="current-password">
+                    <input type="password" class="form-input password-input" id="login-password" placeholder="请输入密码" autocomplete="current-password">
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
@@ -344,7 +592,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">密码</label>
-                    <input type="password" class="form-input" id="reg-password" placeholder="至少6位密码" autocomplete="new-password">
+                    <input type="password" class="form-input password-input" id="reg-password" placeholder="至少6位密码" autocomplete="new-password">
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
@@ -371,7 +619,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">新密码</label>
-                    <input type="password" class="form-input" id="forgot-newpwd" placeholder="设置新密码（至少6位）">
+                    <input type="password" class="form-input password-input" id="forgot-newpwd" placeholder="设置新密码（至少6位）">
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
@@ -398,35 +646,341 @@ let sliderState = {
     forgot: { verified: false, isDragging: false, startX: 0, currentX: 0 }
 };
 
-function initParticles() {
-    const container = document.getElementById('particles');
-    for (let i = 0; i < 20; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        const size = Math.random() * 6 + 2;
-        p.style.width = size + 'px'; p.style.height = size + 'px';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.animationDuration = (Math.random() * 15 + 10) + 's';
-        p.style.animationDelay = (Math.random() * 15) + 's';
-        container.appendChild(p);
+// ==================== 可爱的猫眼睛跟踪系统 - 完全重构 ====================
+function initCatEyeTracking() {
+    const catAvatar = document.getElementById('catAvatar');
+    const leftPupilGroup = document.getElementById('leftPupilGroup');
+    const rightPupilGroup = document.getElementById('rightPupilGroup');
+    const leftEyeContainer = document.getElementById('leftEyeContainer');
+    const rightEyeContainer = document.getElementById('rightEyeContainer');
+
+    if (!catAvatar || !leftPupilGroup || !rightPupilGroup) {
+        console.warn('猫眼睛元素未找到');
+        return;
     }
+
+    // 眼睛配置参数
+    const EYE_CONFIG = {
+        // 左眼在SVG中的位置（考虑transform="translate(72, 105)"）
+        leftEye: { x: 72, y: 105 },
+        // 右眼在SVG中的位置
+        rightEye: { x: 128, y: 105 },
+        // 眼白尺寸
+        eyeballRadiusX: 18,
+        eyeballRadiusY: 20,
+        // 瞳孔最大移动距离（在眼白范围内）
+        maxPupilOffset: 7,  
+        // 跟踪灵敏度（值越小越灵敏）
+        sensitivity: 25,
+        // 平滑系数（0-1，越小越平滑）
+        smoothing: 0.15
+    };
+
+    // 当前瞳孔位置（用于平滑过渡）
+    let currentLeftPos = { x: 0, y: 0 };
+    let currentRightPos = { x: 0, y: 0 };
+
+    // 使用requestAnimationFrame优化性能
+    let animationFrameId = null;
+    let targetLeftPos = { x: 0, y: 0 };
+    let targetRightPos = { x: 0, y: 0 };
+
+    function updateEyePosition(mouseX, mouseY) {
+        if (isBlinking) return;
+
+        const rect = catAvatar.getBoundingClientRect();
+        
+        // 计算SVG缩放比例
+        const svgWidth = 200; // viewBox宽度
+        const scale = rect.width / svgWidth;
+
+        // 将鼠标坐标转换到SVG坐标系
+        const mouseXInSVG = (mouseX - rect.left) / scale;
+        const mouseYInSVG = (mouseY - rect.top) / scale;
+
+        // 计算左眼瞳孔目标位置
+        targetLeftPos = calculatePupilPosition(
+            mouseXInSVG, 
+            mouseYInSVG, 
+            EYE_CONFIG.leftEye,
+            EYE_CONFIG
+        );
+
+        // 计算右眼瞳孔目标位置
+        targetRightPos = calculatePupilPosition(
+            mouseXInSVG, 
+            mouseYInSVG, 
+            EYE_CONFIG.rightEye,
+            EYE_CONFIG
+        );
+
+        // 如果没有动画帧在运行，启动平滑更新
+        if (!animationFrameId) {
+            animateEyes();
+        }
+    }
+
+    /**
+     * 计算瞳孔应该在的位置
+     * @param {number} mouseX - 鼠标X坐标（SVG坐标系）
+     * @param {number} mouseY - 鼠标Y坐标（SVG坐标系）
+     * @param {Object} eyeCenter - 眼睛中心位置
+     * @param {Object} config - 配置参数
+     * @returns {Object} - 瞳孔偏移量 {x, y}
+     */
+    function calculatePupilPosition(mouseX, mouseY, eyeCenter, config) {
+        // 计算从眼睛中心到鼠标的方向向量
+        const dx = mouseX - eyeCenter.x;
+        const dy = mouseY - eyeCenter.y;
+        
+        // 计算距离
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 归一化并应用灵敏度和边界限制
+        if (distance === 0) {
+            return { x: 0, y: 0 };
+        }
+
+        // 计算方向（单位向量）
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+
+        // 根据距离计算移动量（使用非线性映射使效果更自然）
+        const rawOffset = Math.min(distance / config.sensitivity, 1);
+        const easedOffset = easeOutCubic(rawOffset); // 缓动函数
+        
+        // 应用最大偏移限制
+        const finalOffset = easedOffset * config.maxPupilOffset;
+
+        return {
+            x: dirX * finalOffset,
+            y: dirY * finalOffset
+        };
+    }
+
+    /**
+     * 缓动函数 - 三次方缓出（先快后慢）
+     */
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    /**
+     * 平滑动画循环
+     */
+    function animateEyes() {
+        // 平滑插值（Lerp）
+        currentLeftPos.x += (targetLeftPos.x - currentLeftPos.x) * EYE_CONFIG.smoothing;
+        currentLeftPos.y += (targetLeftPos.y - currentLeftPos.y) * EYE_CONFIG.smoothing;
+        
+        currentRightPos.x += (targetRightPos.x - currentRightPos.x) * EYE_CONFIG.smoothing;
+        currentRightPos.y += (targetRightPos.y - currentRightPos.y) * EYE_CONFIG.smoothing;
+
+        // 应用变换
+        leftPupilGroup.style.transform = `translate(${currentLeftPos.x}px, ${currentLeftPos.y}px)`;
+        rightPupilGroup.style.transform = `translate(${currentRightPos.x}px, ${currentRightPos.y}px)`;
+
+        // 检查是否接近目标位置（误差小于0.01时停止）
+        const leftDiff = Math.abs(targetLeftPos.x - currentLeftPos.x) + Math.abs(targetLeftPos.y - currentLeftPos.y);
+        const rightDiff = Math.abs(targetRightPos.x - currentRightPos.x) + Math.abs(targetRightPos.y - currentRightPos.y);
+
+        if (leftDiff > 0.01 || rightDiff > 0.01) {
+            animationFrameId = requestAnimationFrame(animateEyes);
+        } else {
+            animationFrameId = null;
+        }
+    }
+
+    // 鼠标移动事件监听
+    document.addEventListener('mousemove', (e) => {
+        updateEyePosition(e.clientX, e.clientY);
+    });
+
+    // 触摸设备支持
+    document.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+            updateEyePosition(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    }, { passive: true });
+
+    // 鼠标离开窗口时重置到中心
+    document.addEventListener('mouseleave', () => {
+        targetLeftPos = { x: 0, y: 0 };
+        targetRightPos = { x: 0, y: 0 };
+        if (!animationFrameId) {
+            animateEyes();
+        }
+    });
+
+    console.log('✅ 眼睛跟踪系统已初始化（改进版）');
 }
-initParticles();
 
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById(`panel-${tabName}`).classList.add('active');
+// ==================== 密码输入时的闭眼功能 - 增强版 ====================
+let isBlinking = false;
+let blinkInterval = null;
+let blinkTimeout = null;
 
-    const logoSub = document.querySelector('.logo-subtitle');
-    if (tabName === 'login') logoSub.textContent = '登录以继续您的旅程';
-    else if (tabName === 'register') logoSub.textContent = '创建一个新账号';
-    else logoSub.textContent = '通过验证重置您的密码';
+function initPasswordBlink() {
+    const passwordInputs = document.querySelectorAll('.password-input');
+    const catAvatar = document.getElementById('catAvatar');
 
-    hideAlert();
+    if (!catAvatar || passwordInputs.length === 0) {
+        console.warn('密码输入框或猫咪头像未找到');
+        return;
+    }
+
+    passwordInputs.forEach(input => {
+        // 聚焦时开始害羞模式
+        input.addEventListener('focus', () => {
+            startShyMode();
+        });
+
+        // 失去焦点时恢复正常
+        input.addEventListener('blur', () => {
+            stopShyMode();
+        });
+
+        // 鼠标悬停时也开始害羞模式（新增）
+        input.addEventListener('mouseenter', () => {
+            startShyMode();
+        });
+
+        // 鼠标离开时恢复正常（新增）
+        input.addEventListener('mouseleave', () => {
+            // 只有在输入框未聚焦时才停止
+            if (!document.activeElement || document.activeElement !== input) {
+                stopShyMode();
+            }
+        });
+
+        // 每次输入都触发眨眼（模拟保护隐私）
+        input.addEventListener('input', () => {
+            // 确保眼睛是闭着的
+            if (!catAvatar.classList.contains('blinking')) {
+                triggerEnhancedBlink();
+            }
+        });
+    });
+
+    console.log('✅ 密码闭眼功能已初始化（增强版）');
 }
 
+/**
+ * 开始害羞模式（保持闭眼）
+ */
+function startShyMode() {
+    if (blinkInterval) return;
+    
+    isBlinking = true;
+
+    // 立即闭眼并保持
+    const catAvatar = document.getElementById('catAvatar');
+    if (catAvatar) {
+        catAvatar.classList.add('blinking');
+    }
+
+    // 取消任何可能的眨眼间隔（保持长闭）
+    if (blinkInterval) {
+        clearTimeout(blinkInterval);
+        blinkInterval = null;
+    }
+
+    // 取消任何正在进行的眨眼动画
+    if (blinkTimeout) {
+        clearTimeout(blinkTimeout);
+        blinkTimeout = null;
+    }
+
+    console.log('😳 猫咪进入害羞模式（保持闭眼）');
+}
+
+/**
+ * 安排下一次眨眼（已废弃 - 现在使用长闭眼模式）
+ */
+// function scheduleNextBlink() {
+//     if (blinkInterval) clearInterval(blinkInterval);
+//     
+//     const randomDelay = 2000 + Math.random() * 2000; // 2-4秒随机
+//     
+//     blinkInterval = setTimeout(() => {
+//         if (isBlinking) {
+//             triggerEnhancedBlink();
+//             scheduleNextBlink(); // 递归调用
+//         }
+//     }, randomDelay);
+// }
+
+/**
+ * 停止害羞模式
+ */
+function stopShyMode() {
+    isBlinking = false;
+    
+    if (blinkInterval) {
+        clearTimeout(blinkInterval);
+        blinkInterval = null;
+    }
+    
+    if (blinkTimeout) {
+        clearTimeout(blinkTimeout);
+        blinkTimeout = null;
+    }
+
+    // 立即让眼睛睁开
+    const catAvatar = document.getElementById('catAvatar');
+    if (catAvatar) {
+        catAvatar.classList.remove('blinking');
+    }
+
+    console.log('😌 猫咪恢复正常（睁开眼睛）');
+}
+
+/**
+ * 触发增强版眨眼动画
+ * 包含：闭眼 → 保持 → 睁眼 的完整过程
+ */
+function triggerEnhancedBlink() {
+    const catAvatar = document.getElementById('catAvatar');
+    if (!catAvatar) return;
+
+    // 如果已经在眨眼过程中，先完成当前动画
+    if (catAvatar.classList.contains('blinking')) {
+        catAvatar.classList.remove('blinking');
+    }
+
+    // 添加闭眼状态
+    catAvatar.classList.add('blinking');
+
+    // 自动移除闭眼状态（动画持续时间250ms + 保持50ms）
+    blinkTimeout = setTimeout(() => {
+        catAvatar.classList.remove('blinking');
+        blinkTimeout = null;
+    }, 300);
+}
+
+// ==================== 随机自动眨眼（增加生动感）- 优化版 ====================
+function initRandomBlink() {
+    // 首次延迟后开始随机眨眼
+    setTimeout(startRandomBlinkCycle, 3000 + Math.random() * 4000);
+
+    function startRandomBlinkCycle() {
+        const nextBlinkDelay = 4000 + Math.random() * 5000; // 4-9秒随机间隔
+        
+        setTimeout(() => {
+            // 只有在不处于害羞模式时才触发随机眨眼
+            if (!isBlinking && Math.random() > 0.6) { // 40%概率眨眼
+                triggerEnhancedBlink();
+            }
+            
+            // 继续下一轮
+            startRandomBlinkCycle();
+        }, nextBlinkDelay);
+    }
+
+    console.log('✅ 随机眨眼系统已启动');
+}
+
+// ==================== 滑块验证功能 ====================
 function initSlider(sliderId) {
     const slider = document.getElementById(sliderId);
     if (!slider) return;
@@ -491,9 +1045,12 @@ function verifySliderSuccess(slider, btn, bg, text, key) {
     bg.style.width = '100%';
 
     setTimeout(() => {
-        text.textContent = '验证成功';
+        text.textContent = '验证成功 ✓';
         btn.innerHTML = '';
     }, 200);
+
+    // 猫咪开心反应
+    triggerCatHappy();
 }
 
 function resetSlider(slider, btn, bg, key) {
@@ -513,15 +1070,62 @@ function isSliderVerified(key) {
     return sliderState[key] && sliderState[key].verified;
 }
 
+// 猫咪开心动画（验证成功时）
+function triggerCatHappy() {
+    const wrapper = document.getElementById('catAvatarWrapper');
+    if (wrapper) {
+        wrapper.style.animation = 'none';
+        wrapper.offsetHeight; // 触发重排
+        wrapper.style.animation = 'catHappyJump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+}
+
+// 添加开心的跳跃动画样式
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+    @keyframes catHappyJump {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        25% { transform: scale(1.15) rotate(-5deg) translateY(-10px); }
+        50% { transform: scale(1.1) rotate(5deg) translateY(-5px); }
+        75% { transform: scale(1.15) rotate(-3deg) translateY(-8px); }
+    }
+`;
+document.head.appendChild(styleSheet);
+
+// ==================== 标签页切换 ====================
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`panel-${tabName}`).classList.add('active');
+
+    const logoTitle = document.querySelector('.logo-title');
+    const logoSub = document.querySelector('.logo-subtitle');
+    
+    if (tabName === 'login') {
+        logoTitle.textContent = '欢迎回来';
+        logoSub.textContent = '登录以继续您的旅程 🐱';
+    } else if (tabName === 'register') {
+        logoTitle.textContent = '创建账号';
+        logoSub.textContent = '加入我们的大家庭 🎉';
+    } else {
+        logoTitle.textContent = '找回密码';
+        logoSub.textContent = '别担心，我来帮你 🔒';
+    }
+
+    hideAlert();
+}
+
+// ==================== 错误提示翻译 ====================
 function translateError(raw) {
     const map = {
-        '用户名或密码错误':          '账号或密码不对哦，请重新输入',
+        '用户名或密码错误':          '账号或密码不对哦，猫咪帮你看看？🐱',
         '用户名已存在':              '这个用户名已经被注册啦，换一个试试',
-        '用户不存在':                '没找到这个账号，请确认用户名是否正确',
-        '验证码错误或已过期':         '滑块验证未完成，请拖动滑块',
+        '用户不存在':                '没找到这个账号，确认一下用户名是否正确',
+        '验证码错误或已过期':         '滑块验证未完成，拖动滑块试试',
         '用户名长度3-20位':           '用户名需要3到20个字符（字母或数字）',
-        '用户名只能包含字母和数字':   '用户名只能用英文字母和数字，不能有特殊符号',
-        '密码至少6位':               '密码太短了，至少要6个字符哦',
+        '用户名只能包含字母和数字':   '用户名只能用英文字母和数字哦',
+        '密码至少6位':               '密码太短了，至少要6个字符呢',
         '新密码至少6位':             '新密码太短了，至少要6个字符哦',
         '昵称不能为空':              '昵称不能留空，随便写一个吧',
         '无效凭证，重新登录':        '登录过期了，请重新登录',
@@ -529,6 +1133,7 @@ function translateError(raw) {
     return map[raw] || (raw.length > 30 ? '操作失败了，请稍后再试' : raw);
 }
 
+// ==================== 提示消息 ====================
 function showAlert(msg, ok = true) {
     const el = document.getElementById('messageAlert');
     el.textContent = msg;
@@ -540,12 +1145,14 @@ function hideAlert() {
     document.getElementById('messageAlert').className = 'alert-msg';
 }
 
+// ==================== 页面跳转 ====================
 function goToChat(token, username) {
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
     window.location.href = CHAT_PAGE;
 }
 
+// ==================== 表单提交函数 ====================
 async function doLogin() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -562,12 +1169,12 @@ async function doLogin() {
         const data = await res.json();
 
         if (res.ok) {
-            showAlert('登录成功！');
+            showAlert('登录成功！猫咪很开心见到你 🐱✨');
             goToChat(data.access_token, username);
         } else {
             showAlert(translateError(data.detail) || '登录失败了，请稍后再试', false);
         }
-    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+    } catch(e) { showAlert('网络好像有问题，请检查连接', false); }
 }
 
 async function doRegister() {
@@ -587,13 +1194,13 @@ async function doRegister() {
         const data = await res.json();
 
         if (res.ok) {
-            showAlert('注册成功！请登录');
+            showAlert('注册成功！欢迎加入我们 🎉🐱');
             ['reg-username','reg-password','reg-nickname'].forEach(id => document.getElementById(id).value = '');
             setTimeout(() => switchTab('login'), 1200);
         } else {
             showAlert(translateError(data.detail) || '注册失败了，请稍后再试', false);
         }
-    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+    } catch(e) { showAlert('网络好像有问题，请检查连接', false); }
 }
 
 async function doForgotPassword() {
@@ -612,19 +1219,28 @@ async function doForgotPassword() {
         const data = await res.json();
 
         if (res.ok) {
-            showAlert('密码重置成功！请使用新密码登录');
+            showAlert('密码重置成功！猫咪帮你记住了 🔐');
             ['forgot-username','forgot-newpwd'].forEach(id => document.getElementById(id).value = '');
             setTimeout(() => switchTab('login'), 1500);
         } else {
             showAlert(translateError(data.detail) || '重置失败了，请稍后再试', false);
         }
-    } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
+    } catch(e) { showAlert('网络好像有问题，请检查连接', false); }
 }
 
+// ==================== 初始化 ====================
 window.onload = function() {
+    // 初始化所有功能
+    initCatEyeTracking();
+    initPasswordBlink();
+    initRandomBlink();
+    
+    // 初始化滑块验证
     initSlider('slider-login');
     initSlider('slider-register');
     initSlider('slider-forgot');
+
+    console.log('🐱 可爱的猫咪登录界面已加载完成！');
 };
 </script>
 </body>
