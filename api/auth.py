@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import Response
 from pydantic import BaseModel, field_validator
@@ -8,7 +8,6 @@ from typing import Optional
 from core.config import get_db
 from core.security import get_password_hash, verify_password, create_access_token
 from core.utils import generate_10digit_numeric_uid
-from core.captcha import generate_captcha, verify_captcha
 from models.db_models import User
 
 router = APIRouter()
@@ -17,8 +16,6 @@ class UserCreate(BaseModel):
     username: str
     password: str
     nickname: Optional[str] = None
-    captcha_id: str
-    captcha_text: str
 
     @field_validator('username')
     @classmethod
@@ -39,14 +36,10 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
-    captcha_id: str
-    captcha_text: str
 
 class ForgotPasswordRequest(BaseModel):
     username: str
     new_password: str
-    captcha_id: str
-    captcha_text: str
 
     @field_validator('new_password')
     @classmethod
@@ -55,18 +48,8 @@ class ForgotPasswordRequest(BaseModel):
             raise ValueError('新密码至少6位')
         return v
 
-@router.get("/captcha", summary="获取图形验证码")
-def get_captcha():
-    captcha_id, image_buf, _ = generate_captcha()
-    return Response(content=image_buf.getvalue(), media_type="image/png",
-                    headers={"X-Captcha-Id": captcha_id})
-
 @router.post("/register", summary="用户注册")
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    # 暂时跳过验证码验证
-    # if not verify_captcha(user.captcha_id, user.captcha_text):
-    #     raise HTTPException(status_code=400, detail="验证码错误或已过期")
-
     existing_user = db.exec(select(User).where(User.username == user.username)).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="用户名已存在")
@@ -86,10 +69,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", summary="登录获取 Token")
 def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    # 暂时跳过验证码验证
-    # if not verify_captcha(login_data.captcha_id, login_data.captcha_text):
-    #     raise HTTPException(status_code=400, detail="验证码错误或已过期")
-
     user = db.exec(select(User).where(User.username == login_data.username)).first()
     if not user or not verify_password(login_data.password, user.password):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
@@ -99,10 +78,6 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password", summary="忘记密码-重置密码")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    # 暂时跳过验证码验证
-    # if not verify_captcha(req.captcha_id, req.captcha_text):
-    #     raise HTTPException(status_code=400, detail="验证码错误或已过期")
-
     user = db.exec(select(User).where(User.username == req.username)).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")

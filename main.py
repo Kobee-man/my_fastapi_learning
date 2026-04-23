@@ -31,7 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=FileResponse)
 async def index_page():
-    return "index_justtest.html"
+    return "login.html"
 
 @app.get("/chat.html", response_class=FileResponse)
 async def chat_page():

@@ -142,24 +142,91 @@
             box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 0 20px rgba(99,102,241,0.08);
         }
 
-        .captcha-row {
-            display: flex; gap: 10px; align-items: stretch;
+        .slider-verify {
+            position: relative;
+            width: 100%;
+            height: 48px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 11px;
+            overflow: hidden;
+            user-select: none;
+            margin-top: 4px;
         }
-        .captcha-row .form-input { flex: 1; }
-        .captcha-img-wrap {
-            width: 110px; height: 47px; border-radius: 11px; overflow: hidden;
-            cursor: pointer; position: relative; border: 1px solid rgba(255,255,255,0.1);
-            flex-shrink: 0; transition: all 0.3s ease;
+        .slider-verify-bg {
+            position: absolute;
+            top: 0; left: 0; height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            transition: width 0.1s ease-out;
+            border-radius: 11px 0 0 11px;
         }
-        .captcha-img-wrap:hover { border-color: rgba(99,102,241,0.4); }
-        .captcha-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .captcha-refresh-hint {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.6);
-            font-size: 10px; text-align: center; padding: 2px 0;
-            opacity: 0; transition: opacity 0.2s;
+        .slider-verify.success .slider-verify-bg {
+            background: linear-gradient(90deg, #22c55e, #4ade80);
+            border-radius: 11px;
         }
-        .captcha-img-wrap:hover .captcha-refresh-hint { opacity: 1; }
+        .slider-verify-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.45);
+            font-size: 13px;
+            font-weight: 500;
+            pointer-events: none;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        .slider-verify.success .slider-verify-text {
+            color: white;
+            opacity: 1;
+        }
+        .slider-verify-btn {
+            position: absolute;
+            top: 4px; left: 4px;
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #fff, #f3f4f6);
+            border: none;
+            border-radius: 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #6366f1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1) inset;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+            z-index: 2;
+            touch-action: none;
+        }
+        .slider-verify-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+        }
+        .slider-verify-btn:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+        .slider-verify.success .slider-verify-btn {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            color: white;
+            cursor: default;
+        }
+        .slider-verify.success .slider-verify-btn::after {
+            content: '✓';
+            font-size: 20px;
+            font-weight: bold;
+        }
+        @keyframes sliderShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .slider-verify.shake .slider-verify-btn {
+            animation: sliderShake 0.4s ease-in-out;
+        }
 
         .submit-btn {
             width: 100%; padding: 14px; margin-top: 6px;
@@ -258,13 +325,11 @@
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">图形验证码</label>
-                    <div class="captcha-row">
-                        <input type="text" class="form-input" id="login-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
-                        <div class="captcha-img-wrap" onclick="refreshCaptcha('login')" title="点击刷新验证码">
-                            <img id="login-captcha-img" src="" alt="验证码">
-                            <span class="captcha-refresh-hint">点击刷新</span>
-                        </div>
+                    <label class="form-label">安全验证</label>
+                    <div class="slider-verify" id="slider-login" data-verified="false">
+                        <div class="slider-verify-bg"></div>
+                        <span class="slider-verify-text">向右拖动滑块完成验证</span>
+                        <button type="button" class="slider-verify-btn">☰</button>
                     </div>
                 </div>
                 <div class="forgot-link"><a onclick="switchTab('forgot')">忘记密码？</a></div>
@@ -288,13 +353,11 @@
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">图形验证码</label>
-                    <div class="captcha-row">
-                        <input type="text" class="form-input" id="reg-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
-                        <div class="captcha-img-wrap" onclick="refreshCaptcha('reg')" title="点击刷新验证码">
-                            <img id="reg-captcha-img" src="" alt="验证码">
-                            <span class="captcha-refresh-hint">点击刷新</span>
-                        </div>
+                    <label class="form-label">安全验证</label>
+                    <div class="slider-verify" id="slider-register" data-verified="false">
+                        <div class="slider-verify-bg"></div>
+                        <span class="slider-verify-text">向右拖动滑块完成验证</span>
+                        <button type="button" class="slider-verify-btn">☰</button>
                     </div>
                 </div>
                 <button class="submit-btn" onclick="doRegister()">注 册</button>
@@ -312,13 +375,11 @@
                     <div class="input-glow-line"></div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">图形验证码</label>
-                    <div class="captcha-row">
-                        <input type="text" class="form-input" id="forgot-captcha" placeholder="输入验证码" maxlength="4" autocomplete="off">
-                        <div class="captcha-img-wrap" onclick="refreshCaptcha('forgot')" title="点击刷新验证码">
-                            <img id="forgot-captcha-img" src="" alt="验证码">
-                            <span class="captcha-refresh-hint">点击刷新</span>
-                        </div>
+                    <label class="form-label">安全验证</label>
+                    <div class="slider-verify" id="slider-forgot" data-verified="false">
+                        <div class="slider-verify-bg"></div>
+                        <span class="slider-verify-text">向右拖动滑块完成验证</span>
+                        <button type="button" class="slider-verify-btn">☰</button>
                     </div>
                 </div>
                 <button class="submit-btn" onclick="doForgotPassword()">重置密码</button>
@@ -330,7 +391,12 @@
 <script>
 const API = "http://127.0.0.1:8000";
 const CHAT_PAGE = "chat.html";
-let captchaIds = { login: '', register: '', forgot: '' };
+
+let sliderState = {
+    login: { verified: false, isDragging: false, startX: 0, currentX: 0 },
+    register: { verified: false, isDragging: false, startX: 0, currentX: 0 },
+    forgot: { verified: false, isDragging: false, startX: 0, currentX: 0 }
+};
 
 function initParticles() {
     const container = document.getElementById('particles');
@@ -358,26 +424,93 @@ function switchTab(tabName) {
     else if (tabName === 'register') logoSub.textContent = '创建一个新账号';
     else logoSub.textContent = '通过验证重置您的密码';
 
-    refreshCaptcha(tabName === 'forgot' ? 'forgot' : (tabName === 'register' ? 'reg' : 'login'));
+    hideAlert();
 }
 
-async function refreshCaptcha(which) {
-    try {
-        const res = await fetch(`${API}/captcha`);
-        if (!res.ok) return;
-        const captchaId = res.headers.get('X-Captcha-Id');
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+function initSlider(sliderId) {
+    const slider = document.getElementById(sliderId);
+    if (!slider) return;
 
-        const keyMap = { login: 'login', register: 'reg', reg: 'reg', forgot: 'forgot' };
-        const key = keyMap[which] || which;
+    const btn = slider.querySelector('.slider-verify-btn');
+    const bg = slider.querySelector('.slider-verify-bg');
+    const text = slider.querySelector('.slider-verify-text');
+    const key = sliderId.replace('slider-', '');
+    const maxOffset = slider.offsetWidth - btn.offsetWidth - 8;
 
-        const imgEl = document.getElementById(`${key}-captcha-img`);
-        if (imgEl) imgEl.src = url;
-        else return;
+    function handleDragStart(e) {
+        if (sliderState[key].verified) return;
 
-        captchaIds[key] = captchaId;
-    } catch(e) { console.error(e); }
+        e.preventDefault();
+        sliderState[key].isDragging = true;
+        sliderState[key].startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        btn.style.transition = 'none';
+        bg.style.transition = 'none';
+    }
+
+    function handleDragMove(e) {
+        if (!sliderState[key].isDragging || sliderState[key].verified) return;
+
+        e.preventDefault();
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const deltaX = clientX - sliderState[key].startX;
+        sliderState[key].currentX = Math.max(0, Math.min(deltaX, maxOffset));
+
+        btn.style.transform = `translateX(${sliderState[key].currentX}px)`;
+        bg.style.width = `${(sliderState[key].currentX + btn.offsetWidth / 2) / slider.offsetWidth * 100}%`;
+    }
+
+    function handleDragEnd() {
+        if (!sliderState[key].isDragging || sliderState[key].verified) return;
+
+        sliderState[key].isDragging = false;
+        btn.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        bg.style.transition = 'width 0.3s ease';
+
+        if (sliderState[key].currentX >= maxOffset * 0.9) {
+            verifySliderSuccess(slider, btn, bg, text, key);
+        } else {
+            resetSlider(slider, btn, bg, key);
+        }
+    }
+
+    btn.addEventListener('mousedown', handleDragStart);
+    btn.addEventListener('touchstart', handleDragStart, { passive: false });
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('touchmove', handleDragMove, { passive: false });
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchend', handleDragEnd);
+}
+
+function verifySliderSuccess(slider, btn, bg, text, key) {
+    slider.classList.add('success');
+    slider.dataset.verified = 'true';
+    sliderState[key].verified = true;
+
+    const maxOffset = slider.offsetWidth - btn.offsetWidth - 8;
+    btn.style.transform = `translateX(${maxOffset}px)`;
+    bg.style.width = '100%';
+
+    setTimeout(() => {
+        text.textContent = '验证成功';
+        btn.innerHTML = '';
+    }, 200);
+}
+
+function resetSlider(slider, btn, bg, key) {
+    btn.style.transform = 'translateX(0px)';
+    bg.style.width = '0';
+    sliderState[key].currentX = 0;
+
+    setTimeout(() => {
+        if (!sliderState[key].verified) {
+            slider.classList.add('shake');
+            setTimeout(() => slider.classList.remove('shake'), 400);
+        }
+    }, 300);
+}
+
+function isSliderVerified(key) {
+    return sliderState[key] && sliderState[key].verified;
 }
 
 function translateError(raw) {
@@ -385,7 +518,7 @@ function translateError(raw) {
         '用户名或密码错误':          '账号或密码不对哦，请重新输入',
         '用户名已存在':              '这个用户名已经被注册啦，换一个试试',
         '用户不存在':                '没找到这个账号，请确认用户名是否正确',
-        '验证码错误或已过期':         '验证码不对或过期了，点图片刷新一下重填',
+        '验证码错误或已过期':         '滑块验证未完成，请拖动滑块',
         '用户名长度3-20位':           '用户名需要3到20个字符（字母或数字）',
         '用户名只能包含字母和数字':   '用户名只能用英文字母和数字，不能有特殊符号',
         '密码至少6位':               '密码太短了，至少要6个字符哦',
@@ -400,7 +533,11 @@ function showAlert(msg, ok = true) {
     const el = document.getElementById('messageAlert');
     el.textContent = msg;
     el.className = `alert-msg ${ok ? 'success' : 'error'}`;
-    setTimeout(() => { el.className = 'alert-msg'; }, 4000);
+    setTimeout(() => { el.className = 'alert-msg'; }, 4500);
+}
+
+function hideAlert() {
+    document.getElementById('messageAlert').className = 'alert-msg';
 }
 
 function goToChat(token, username) {
@@ -414,12 +551,13 @@ async function doLogin() {
     const password = document.getElementById('login-password').value;
 
     if (!username || !password) { showAlert('用户名和密码都要填哦', false); return; }
+    if (!isSliderVerified('login')) { showAlert('请先完成滑块安全验证', false); return; }
 
     try {
         const res = await fetch(`${API}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, captcha_id: 'skip', captcha_text: 'skip' })
+            body: JSON.stringify({ username, password })
         });
         const data = await res.json();
 
@@ -438,12 +576,13 @@ async function doRegister() {
     const nickname = document.getElementById('reg-nickname').value.trim();
 
     if (!username || !password) { showAlert('用户名和密码都要填哦', false); return; }
+    if (!isSliderVerified('register')) { showAlert('请先完成滑块安全验证', false); return; }
 
     try {
         const res = await fetch(`${API}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, nickname: nickname || undefined, captcha_id: 'skip', captcha_text: 'skip' })
+            body: JSON.stringify({ username, password, nickname: nickname || undefined })
         });
         const data = await res.json();
 
@@ -462,12 +601,13 @@ async function doForgotPassword() {
     const newPassword = document.getElementById('forgot-newpwd').value;
 
     if (!username || !newPassword) { showAlert('账号和新密码都要填哦', false); return; }
+    if (!isSliderVerified('forgot')) { showAlert('请先完成滑块安全验证', false); return; }
 
     try {
         const res = await fetch(`${API}/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, new_password: newPassword, captcha_id: 'skip', captcha_text: 'skip' })
+            body: JSON.stringify({ username, new_password: newPassword })
         });
         const data = await res.json();
 
@@ -481,7 +621,11 @@ async function doForgotPassword() {
     } catch(e) { showAlert('网络好像有问题，请检查一下网络连接', false); }
 }
 
-window.onload = () => refreshCaptcha('login');
+window.onload = function() {
+    initSlider('slider-login');
+    initSlider('slider-register');
+    initSlider('slider-forgot');
+};
 </script>
 </body>
 </html>
