@@ -330,6 +330,20 @@ export const api = {
     return this.request(`/turtle-soup/game/${gameId}`, {
       method: 'DELETE'
     })
+  },
+
+  judgeQuestion(data) {
+    return this.request('/turtle-soup/judge-question', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  },
+
+  semanticJudge(story, question) {
+    return this.request('/turtle-soup/semantic-judge', {
+      method: 'POST',
+      body: JSON.stringify({ story, question })
+    })
   }
 }
 

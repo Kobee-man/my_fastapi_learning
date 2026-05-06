@@ -15,40 +15,45 @@ import json
 import httpx
 from typing import Optional
 from dataclasses import dataclass, field
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # ==================== 配置 ====================
-
 @dataclass
 class LLMConfig:
     """LLM配置"""
     # 模式: "local" (Ollama) 或 "external" (OpenAI兼容API)
-    mode: str = field(default_factory=lambda: os.getenv("LLM_MODE", "local"))
+    mode: str = field(default_factory=lambda: os.getenv("LLM_MODE", "external"))
 
     # 本地模式 (Ollama)
     ollama_host: str = field(default_factory=lambda: os.getenv("OLLAMA_HOST", "http://localhost:11434"))
     ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen3.5:4b"))
 
-    # 外部API模式 (OpenAI兼容)
+    # 外部API模式 
     api_url: str = field(default_factory=lambda: os.getenv(
-        "LLM_API_URL", "https://api.openai.com/v1/chat/completions"
+        "LLM_API_URL", "https://api.deepseek.com/v1/chat/completions"
     ))
-    api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", ""))
-    api_model: str = field(default_factory=lambda: os.getenv("LLM_API_MODEL", "gpt-3.5-turbo"))
+    api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", os.getenv("DEEPSEEK_API_KEY")))  # type: ignore
+    api_model: str = field(default_factory=lambda: os.getenv("LLM_API_MODEL", "deepseek-v4-flash"))
 
     # 通用参数
     temperature: float = 0.8
     max_tokens: int = 1000
     timeout: float = 30.0
 
-
 # ==================== 服务 ====================
 
 class LLMService:
     """LLM服务，支持本地/外部API双模式"""
 
+    
     def __init__(self, config: Optional[LLMConfig] = None):
         self.config = config or LLMConfig()
+        print(f"--- LLM 调试信息 ---")
+        print(f"当前模式: {self.config.mode}")
+        print(f"API Key 是否存在: {bool(self.config.api_key)}")
+        print(f"模型名称: {self.config.api_model if self.config.mode=='external' else self.config.ollama_model}")
 
     @property
     def mode(self) -> str:
@@ -150,6 +155,7 @@ class LLMService:
                     headers=headers,
                     json=payload,
                 )
+                print(f"API 原始响应: {response.json()}") # 调试完删掉，防止泄露隐私
 
                 if response.status_code == 200:
                     data = response.json()

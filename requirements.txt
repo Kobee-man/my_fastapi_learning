@@ -8,3 +8,4 @@ pymysql
 sqlmodel
 Pillow
 requests
+redis
