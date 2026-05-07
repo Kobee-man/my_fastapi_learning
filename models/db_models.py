@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-from core.database import Base  # 改为从core.database导入Base
+from core.config import Base  # 统一使用core.config的Base
 
 # 用户表
 class User(Base):

@@ -20,7 +20,7 @@ export const api = {
 
     try {
       const response = await fetch(`${API_BASE}${url}`, config)
-      
+
       // 检查响应头中的权限信息（后端中间件添加的）
       if (response.ok) {
         const llmAvailable = response.headers.get('X-LLM-Available')
@@ -31,17 +31,24 @@ export const api = {
           }
         }
       }
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw { status: response.status, detail: data.detail }
+
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        data = {}
       }
-      
+
+      if (!response.ok) {
+        throw { status: response.status, detail: data.detail || `请求失败 (${response.status})` }
+      }
+
       return data
     } catch (error) {
       console.error('API Error:', error)
-      throw error
+      // 网络错误（连接拒绝等）没有 .detail，统一格式
+      if (error.detail) throw error
+      throw { status: 0, detail: error.message || '网络连接失败，请检查服务是否启动' }
     }
   },
 
@@ -232,21 +239,12 @@ export const api = {
         method: 'POST'
       })
     } catch (error) {
-      // 即使失败也返回可用的默认状态
+      const isNetworkError = error.status === 0
       return {
         llm_available: false,
-        preset_count: 3,
-        preset_available: true,
-        current_mode: 'preset_mode',
-        mode_description: '✅ 基础模式 - 使用预设题目库',
-        guarantees: {
-          system_stability: '✅ 游戏功能正常可用',
-          feature_access: '✅ 可创建和进行游戏'
-        },
-        error_handling: {
-          user_visible_errors: [],
-          note: '所有错误已在内部处理'
-        }
+        server_reachable: !isNetworkError,
+        current_mode: 'degraded',
+        mode_description: isNetworkError ? '服务器未启动' : 'LLM服务不可用'
       }
     }
   },
@@ -336,6 +334,17 @@ export const api = {
     return this.request('/turtle-soup/judge-question', {
       method: 'POST',
       body: JSON.stringify(data)
+    })
+  },
+
+  checkSinglePlayerAnswer(gameId, answer) {
+    return this.request('/turtle-soup/submit-answer', {
+      method: 'POST',
+      body: JSON.stringify({
+        game_id: gameId,
+        answer: answer,
+        player_username: 'single_player'
+      })
     })
   },
 

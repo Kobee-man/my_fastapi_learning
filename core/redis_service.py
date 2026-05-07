@@ -69,6 +69,28 @@ class RedisService:
         """删除Redis中的题目"""
         self.client.delete(self._puzzle_key(game_id))
 
+    # ---- 对话历史 ----
+
+    def _history_key(self, game_id: str) -> str:
+        return f"turtle_soup:history:{game_id}"
+
+    def append_history(self, game_id: str, question: str, answer: str, reason: str = "") -> None:
+        """追加一条问答记录到Redis"""
+        entry = json.dumps({"q": question, "a": answer, "r": reason}, ensure_ascii=False)
+        key = self._history_key(game_id)
+        self.client.rpush(key, entry)
+        self.client.expire(key, PUZZLE_EXPIRE_SECONDS)
+
+    def get_history(self, game_id: str, limit: int = 10) -> list:
+        """获取最近N条问答记录"""
+        key = self._history_key(game_id)
+        raw_list = self.client.lrange(key, -limit, -1)
+        return [json.loads(item) for item in raw_list]
+
+    def delete_history(self, game_id: str) -> None:
+        """删除问答历史"""
+        self.client.delete(self._history_key(game_id))
+
 
 # ==================== 全局实例 ====================
 

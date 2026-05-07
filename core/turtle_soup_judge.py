@@ -299,24 +299,15 @@ async def judge_answer(story: str, question: str) -> dict:
         put_to_cache(story, question, local_result)
         return local_result
 
-    # 3. 构建 prompt 并调用 LLM
+    # 3. 构建 prompt 并调用 LLM（使用 per-call 参数覆盖，避免修改全局配置的竞态问题）
     prompt, system = build_prompt(story, question)
 
-    # 临时覆盖 LLM 参数（不影响全局配置）
-    original_temp = llm_service.config.temperature
-    original_max = llm_service.config.max_tokens
-    llm_service.config.temperature = JUDGE_TEMPERATURE
-    llm_service.config.max_tokens = JUDGE_MAX_TOKENS
-
     try:
-        response = await llm_service.chat(prompt, system)
+        response = await llm_service.chat(prompt, system, temperature=JUDGE_TEMPERATURE, max_tokens=JUDGE_MAX_TOKENS)
     except LLMError:
         result = _fallback_result("LLM调用失败")
         put_to_cache(story, question, result)
         return result
-    finally:
-        llm_service.config.temperature = original_temp
-        llm_service.config.max_tokens = original_max
 
     # 4. 解析 JSON
     parsed = _parse_response(response)

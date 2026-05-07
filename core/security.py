@@ -7,10 +7,9 @@ from core.config import (
     SECRET_KEY,
     ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    get_db  # 已修复导入
 )
 from models.db_models import User
-from sqlmodel import Session
+from core.config import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -33,7 +32,7 @@ def create_access_token(data: dict):
 # 获取当前登录用户
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db = Depends(lambda: next(get_db()))
+    db = Depends(get_db)
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

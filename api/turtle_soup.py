@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import json
+import re
 import uuid
 from datetime import datetime
 
@@ -47,43 +48,54 @@ class GameInvite(BaseModel):
     invitee_usernames: List[str]
 
 class SinglePlayerJudge(BaseModel):
-    """单人模式问题判断请求"""
+    """单人模式问题判断请求（汤底由后端管理，不从前端传入）"""
+    game_id: str
     question: str
-    truth: str
-    situation: str = ""
-    keywords: List[str] = []
-    hints: List[str] = []
     question_history: List[str] = []
-    game_id: str = ""
 
 
 # ==================== Prompt 模板 ====================
 
 def build_puzzle_prompt(difficulty: str) -> tuple[str, str]:
-    """构建题目生成prompt"""
-    system = "你是一个专业的海龟汤出题专家。你必须只输出JSON，不要输出任何其他文字、解释或markdown标记。"
+    """构建题目生成prompt（带CoT思维链）"""
+    system = (
+        "你是一个专业的海龟汤出题专家。\n"
+        "先在<thinking>标签中构思谜题设计（人物、事件、转折点），"
+        "然后用```json和```包裹输出JSON。\n"
+        "JSON之外不要输出任何其他内容。"
+    )
     prompt = f"""请生成一个{difficulty}难度的海龟汤谜题。
-要求：
-1. 给出一个令人困惑的情境描述（situation）
-2. 情境要合理但有悬念
-3. 提供完整的真相解释（truth）
-4. 提供3个递进式提示（hints）
 
-重要：你的回复必须是一个纯粹的JSON对象，不要用markdown代码块包裹，不要添加任何解释文字。
-直接输出如下格式的JSON：
+要求：
+1. 情境(situation)：令人困惑但有合理解释的场景，2-4句话
+2. 真相(truth)：完整的、逻辑自洽的解释，包含所有关键转折
+3. 提示(hints)：3个递进式提示，从模糊到具体
+4. 分类(category)：谜题的主题分类（如：日常生活、推理悬疑、黑色幽默等）
+
+请按以下格式输出：
+
+<thinking>
+在此构思：
+- 主要人物是谁？什么身份？
+- 发生了什么事件？在哪里？
+- 关键的转折点或隐藏信息是什么？
+- 为什么情境看起来矛盾？
+</thinking>
+
+```json
 {{
-    "title": "谜题标题",
-    "situation": "情境描述",
-    "truth": "完整真相",
-    "hints": ["提示1", "提示2", "提示3"],
+    "title": "谜题标题（简短有趣）",
+    "situation": "情境描述（2-4句话，制造悬念）",
+    "truth": "完整真相（详细解释所有看似矛盾的细节）",
+    "hints": ["提示1（模糊）", "提示2（中等）", "提示3（具体）"],
     "category": "分类"
 }}
-"""
+```"""
     return prompt, system
 
 
 def build_question_judge_prompt(question: str, situation: str, truth: str, question_history: list = None) -> tuple[str, str]:
-    """构建问题判断prompt"""
+    """构建问题判断prompt（带CoT思维链）"""
     history_text = ""
     if question_history:
         recent = question_history[-5:]
@@ -141,8 +153,9 @@ def build_question_judge_prompt(question: str, situation: str, truth: str, quest
 - 确保本次回答可以经受后续追问的检验
 
 # 输出要求
-**绝对严格的JSON格式**（不要添加任何其他文字）：
+用```json和```包裹，**严格JSON格式**（不要添加其他文字）：
 
+```json
 {{
     "is_relevant": true/false,
     "answer": "是"/"否"/"无关",
@@ -150,6 +163,7 @@ def build_question_judge_prompt(question: str, situation: str, truth: str, quest
     "confidence": 0.7-1.0,
     "reasoning_steps": ["第一步的分析结果", "第二步的匹配结果", "第三步的推理过程"]
 }}
+```
 
 # ⚠️ 警告
 - 不要试图"帮助"玩家而放宽标准
@@ -161,7 +175,7 @@ def build_question_judge_prompt(question: str, situation: str, truth: str, quest
 
 
 def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[str, str]:
-    """构建答案检查prompt"""
+    """构建答案检查prompt（带CoT思维链）"""
     system = ""
     prompt = f"""# 角色设定
 你是一位严谨的海龟汤游戏裁判，负责评估玩家推理出的答案是否正确揭示了真相。
@@ -182,7 +196,6 @@ def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[
 - 能够合理解释情境中的所有细节
 - 不存在自相矛盾的陈述
 - 因果关系清晰合理
-- 与之前的问题回答保持一致
 
 ## 3. 表述精确度 (权重: 20%)
 - 关键事实必须准确（人名、物品、动作等）
@@ -207,9 +220,9 @@ def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[
 
 ## 步骤2：逐一比对
 检查玩家的答案是否覆盖了每个关键事实点：
-- ✅ 完全匹配（100%得分）
-- ⚠️ 部分匹配/表述不同但意思对（70%得分）
-- ❌ 缺失或错误（0%得分）
+- 完全匹配（100%得分）
+- 部分匹配/表述不同但意思对（70%得分）
+- 缺失或错误（0%得分）
 
 ## 步骤3：逻辑一致性验证
 思考：如果这个答案是正确的，能否完美解释情境？是否存在逻辑漏洞？
@@ -218,8 +231,9 @@ def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[
 根据四个维度的加权得分，给出最终判定。
 
 # 输出要求
-**严格JSON格式**：
+用```json和```包裹，**严格JSON格式**：
 
+```json
 {{
     "is_correct": true/false,
     "accuracy": 0.0-1.0 (保留2位小数),
@@ -234,6 +248,7 @@ def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[
     "incorrect_claims": ["错误的陈述1（如有）"],
     "feedback": "详细反馈（50-150字），包括：肯定正确的部分 + 指出缺失/错误的部分 + 改进建议"
 }}
+```
 
 # 判定阈值
 - accuracy >= 0.85 → is_correct: true（优秀）
@@ -250,25 +265,62 @@ def build_answer_check_prompt(answer: str, situation: str, truth: str) -> tuple[
 
 # ==================== JSON解析 ====================
 
-def parse_llm_json(text: str) -> Optional[dict]:
-    """尝试从LLM响应中解析JSON，处理markdown代码块等常见格式"""
-    import re
+def _extract_brace_block(text: str) -> Optional[str]:
+    """用括号计数法提取最外层 { ... } 块"""
+    start = text.find('{')
+    if start == -1:
+        return None
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == '{':
+            depth += 1
+        elif text[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return None
 
-    # 去除markdown代码块包裹: ```json ... ``` 或 ``` ... ```
-    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', text.strip())
+
+def _fix_json_issues(raw: str) -> str:
+    """修复常见JSON问题"""
+    # 移除尾部逗号: }, ] 之前
+    raw = re.sub(r',\s*([}\]])', r'\1', raw)
+    return raw
+
+
+def parse_llm_json(text: str) -> Optional[dict]:
+    """从LLM响应中解析JSON，多策略降级"""
+    if not text or not text.strip():
+        return None
+
+    cleaned = text.strip()
+
+    # 1. 去除 <thinking>...</thinking> 标签
+    cleaned = re.sub(r'<thinking>.*?</thinking>', '', cleaned, flags=re.DOTALL)
+
+    # 2. 去除markdown代码块: ```json ... ``` 或 ``` ... ```
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned.strip())
     cleaned = re.sub(r'\n?```\s*$', '', cleaned.strip())
 
-    # 直接尝试解析
+    # 3. 去除 json\n / JSON: 前缀（Ollama 常见）
+    cleaned = re.sub(r'^\s*(?:json|JSON)\s*:?\s*\n?', '', cleaned)
+
+    # 4. 直接尝试解析
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # 从文本中提取最外层 { ... } 块
-    match = re.search(r'\{[\s\S]*\}', cleaned)
-    if match:
+    # 5. 括号计数法提取
+    block = _extract_brace_block(cleaned)
+    if block:
         try:
-            return json.loads(match.group())
+            return json.loads(block)
+        except json.JSONDecodeError:
+            pass
+        # 6. 修复常见问题后重试
+        try:
+            return json.loads(_fix_json_issues(block))
         except json.JSONDecodeError:
             pass
 
@@ -278,7 +330,12 @@ def parse_llm_json(text: str) -> Optional[dict]:
 # ==================== 辅助函数 ====================
 
 def get_game_puzzle(game_id: str) -> Optional[dict]:
-    """从Redis获取游戏的题目数据"""
+    """获取游戏的题目数据（优先内存缓存，降级Redis）"""
+    game = games_db.get(game_id)
+    if game:
+        cached = game.get("_puzzle_cache")
+        if cached:
+            return cached
     return redis_service.get_puzzle(game_id)
 
 
@@ -308,14 +365,18 @@ def calculate_duration(start_time: str, end_time: str) -> str:
 # ==================== API 端点 ====================
 
 @router.post("/check-status")
-async def check_llm_status():
+async def check_llm_status(deep: bool = False):
     """检查LLM服务状态"""
     available = llm_service.is_available()
     redis_ok = redis_service.is_available()
+    llm_reachable = None
+    if deep and available:
+        llm_reachable = await llm_service.ping()
 
     return {
         "status": "ok",
         "llm_available": available,
+        "llm_reachable": llm_reachable,
         "llm_mode": llm_service.mode,
         "redis_available": redis_ok,
         "message": f"LLM服务正常（{llm_service.mode}模式）" if available else "LLM服务不可用，请检查配置",
@@ -324,7 +385,7 @@ async def check_llm_status():
 
 @router.post("/create-game")
 async def create_game(game_data: GameCreate):
-    """创建新游戏 - 完全由LLM生成题目"""
+    """创建新游戏 - 完全由LLM生成题目（汤底仅存后端）"""
     if not llm_service.is_available():
         raise HTTPException(status_code=503, detail="LLM服务不可用，无法生成题目")
 
@@ -336,7 +397,7 @@ async def create_game(game_data: GameCreate):
     for attempt in range(2):
         try:
             prompt, system = build_puzzle_prompt(game_data.difficulty)
-            response = await llm_service.chat(prompt, system)
+            response = await llm_service.chat(prompt, system, temperature=0.6)
             parsed = parse_llm_json(response)
             if not parsed:
                 last_error = f"第{attempt+1}次：无法从LLM响应中解析JSON"
@@ -358,7 +419,7 @@ async def create_game(game_data: GameCreate):
     if puzzle_data is None:
         raise HTTPException(status_code=500, detail=f"LLM生成的题目格式不正确，请重试。({last_error})")
 
-    # 存入Redis
+    # 存入Redis（含汤底truth）
     redis_service.set_puzzle(game_id, puzzle_data)
 
     game = {
@@ -378,19 +439,18 @@ async def create_game(game_data: GameCreate):
         "created_at": datetime.now().isoformat(),
         "started_at": None,
         "finished_at": None,
-        # 内存中缓存一份题目，减少Redis读取
         "_puzzle_cache": puzzle_data,
     }
 
     games_db[game_id] = game
 
+    # 只返回汤面（situation），不返回汤底（truth）
     return {
         "success": True,
         "game_id": game_id,
         "puzzle_preview": {
             "title": puzzle_data.get("title", ""),
             "situation": puzzle_data["situation"],
-            "truth": puzzle_data["truth"],
             "hints": puzzle_data.get("hints", []),
             "difficulty": puzzle_data.get("difficulty", game_data.difficulty),
             "category": puzzle_data.get("category", ""),
@@ -437,9 +497,17 @@ async def join_game(join_data: PlayerJoin):
     }
 
 
+class StartGameRequest(BaseModel):
+    """开始游戏请求"""
+    game_id: str
+    host_username: str
+
+
 @router.post("/start-game")
-async def start_game(game_id: str, host_username: str):
+async def start_game(req: StartGameRequest):
     """开始游戏"""
+    game_id = req.game_id
+    host_username = req.host_username
     if game_id not in games_db:
         raise HTTPException(status_code=404, detail="游戏不存在")
 
@@ -471,7 +539,7 @@ async def start_game(game_id: str, host_username: str):
 
 @router.post("/ask-question")
 async def ask_question(question_data: QuestionSubmit):
-    """提问 - 完全由LLM判断"""
+    """提问 - LLM判断（带重试）"""
     game_id = question_data.game_id
     question = question_data.question.strip()
     username = question_data.player_username
@@ -498,19 +566,35 @@ async def ask_question(question_data: QuestionSubmit):
     if not puzzle:
         raise HTTPException(status_code=500, detail="题目数据丢失")
 
-    # LLM判断
-    try:
-        truth = puzzle["truth"]
-        situation = puzzle["situation"]
-        history_questions = [q["question"] for q in game["questions"]]
-        prompt, _ = build_question_judge_prompt(question, situation, truth, history_questions)
-        response = await llm_service.chat(prompt)
-        parsed = parse_llm_json(response)
-        if not parsed:
-            raise HTTPException(status_code=500, detail="LLM返回格式异常，请重试")
-        judgment = parsed
-    except LLMError as e:
-        raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+    # 组装对话历史
+    history_questions = [q["question"] for q in game["questions"]]
+    if not history_questions:
+        try:
+            redis_history = redis_service.get_history(game_id)
+            history_questions = [h["q"] for h in redis_history]
+        except Exception:
+            pass
+
+    # LLM判断（带重试）
+    truth = puzzle["truth"]
+    situation = puzzle["situation"]
+    prompt, _ = build_question_judge_prompt(question, situation, truth, history_questions)
+
+    judgment = None
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = await llm_service.chat(prompt, temperature=0.3)
+            parsed = parse_llm_json(response)
+            if parsed and "answer" in parsed:
+                judgment = parsed
+                break
+            last_error = f"第{attempt+1}次：解析失败"
+        except LLMError as e:
+            raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+
+    if judgment is None:
+        raise HTTPException(status_code=500, detail=f"LLM返回格式异常，请重试。({last_error})")
 
     question_record = {
         "id": f"q_{len(game['questions']) + 1}",
@@ -530,6 +614,16 @@ async def ask_question(question_data: QuestionSubmit):
             player["questions_asked"] += 1
             break
 
+    # 写入Redis历史
+    try:
+        redis_service.append_history(
+            game_id, question,
+            judgment.get("answer", "是"),
+            judgment.get("reason", "")
+        )
+    except Exception:
+        pass
+
     return {
         "success": True,
         "judgment": judgment,
@@ -541,7 +635,7 @@ async def ask_question(question_data: QuestionSubmit):
 
 @router.post("/submit-answer")
 async def submit_answer(answer_data: AnswerJudge):
-    """提交最终答案 - 完全由LLM判断"""
+    """提交最终答案 - LLM判断（带重试，支持单人模式）"""
     game_id = answer_data.game_id
     answer = answer_data.answer.strip()
     username = answer_data.player_username
@@ -551,8 +645,14 @@ async def submit_answer(answer_data: AnswerJudge):
 
     game = games_db[game_id]
 
-    if game["status"] != "playing":
+    # 允许 waiting（单人模式）和 playing（多人模式）
+    if game["status"] not in ("playing", "waiting"):
         raise HTTPException(status_code=400, detail="游戏未在进行中")
+
+    # 单人模式自动开始
+    if game["status"] == "waiting":
+        game["status"] = "playing"
+        game["started_at"] = datetime.now().isoformat()
 
     if not answer:
         raise HTTPException(status_code=400, detail="答案不能为空")
@@ -565,18 +665,26 @@ async def submit_answer(answer_data: AnswerJudge):
     if not puzzle:
         raise HTTPException(status_code=500, detail="题目数据丢失")
 
-    # LLM判断
-    try:
-        truth = puzzle["truth"]
-        situation = puzzle["situation"]
-        prompt, _ = build_answer_check_prompt(answer, situation, truth)
-        response = await llm_service.chat(prompt)
-        parsed = parse_llm_json(response)
-        if not parsed:
-            raise HTTPException(status_code=500, detail="LLM返回格式异常，请重试")
-        result = parsed
-    except LLMError as e:
-        raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+    # LLM判断（带重试）
+    truth = puzzle["truth"]
+    situation = puzzle["situation"]
+    prompt, _ = build_answer_check_prompt(answer, situation, truth)
+
+    result = None
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = await llm_service.chat(prompt, temperature=0.3)
+            parsed = parse_llm_json(response)
+            if parsed and "is_correct" in parsed:
+                result = parsed
+                break
+            last_error = f"第{attempt+1}次：解析失败"
+        except LLMError as e:
+            raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+
+    if result is None:
+        raise HTTPException(status_code=500, detail=f"LLM返回格式异常，请重试。({last_error})")
 
     if result.get("is_correct"):
         game["status"] = "finished"
@@ -599,8 +707,12 @@ async def submit_answer(answer_data: AnswerJudge):
         }
         game_history.append(history_entry)
 
-        # 清理Redis中的题目
+        # 清理Redis
         redis_service.delete_puzzle(game_id)
+        try:
+            redis_service.delete_history(game_id)
+        except Exception:
+            pass
 
         return {
             "success": True,
@@ -622,27 +734,74 @@ async def submit_answer(answer_data: AnswerJudge):
 
 @router.post("/judge-question")
 async def judge_single_player_question(judge_data: SinglePlayerJudge):
-    """单人模式：LLM判断问题"""
-    if not judge_data.question or not judge_data.truth:
-        raise HTTPException(status_code=400, detail="问题和真相不能为空")
+    """单人模式：LLM判断问题（汤底从后端获取）"""
+    if not judge_data.question or not judge_data.game_id:
+        raise HTTPException(status_code=400, detail="问题和游戏ID不能为空")
 
     if not llm_service.is_available():
         raise HTTPException(status_code=503, detail="LLM服务不可用")
 
+    # 从后端获取汤底
+    puzzle = get_game_puzzle(judge_data.game_id)
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="题目数据不存在或已过期")
+
+    truth = puzzle["truth"]
+    situation = puzzle["situation"]
+
+    # 组装对话历史（前端传入 + Redis补充）
+    redis_history = []
     try:
-        prompt, _ = build_question_judge_prompt(
+        redis_history = redis_service.get_history(judge_data.game_id)
+    except Exception:
+        pass
+    redis_questions = [h["q"] for h in redis_history]
+    all_history = judge_data.question_history if len(judge_data.question_history) > len(redis_questions) else redis_questions
+
+    # LLM判断（带重试）
+    prompt, _ = build_question_judge_prompt(judge_data.question, situation, truth, all_history)
+
+    judgment = None
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = await llm_service.chat(prompt, temperature=0.3)
+            parsed = parse_llm_json(response)
+            if parsed and "answer" in parsed:
+                judgment = parsed
+                break
+            last_error = f"第{attempt+1}次：解析失败"
+        except LLMError as e:
+            raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+
+    if judgment is None:
+        raise HTTPException(status_code=500, detail=f"LLM返回格式异常，请重试。({last_error})")
+
+    # 写入Redis历史
+    try:
+        redis_service.append_history(
+            judge_data.game_id,
             judge_data.question,
-            judge_data.situation or "未提供情境",
-            judge_data.truth,
-            judge_data.question_history
+            judgment.get("answer", "是"),
+            judgment.get("reason", "")
         )
-        response = await llm_service.chat(prompt)
-        parsed = parse_llm_json(response)
-        if not parsed:
-            raise HTTPException(status_code=500, detail="LLM返回格式异常")
-        judgment = parsed
-    except LLMError as e:
-        raise HTTPException(status_code=503, detail=f"LLM判断失败: {e}")
+    except Exception:
+        pass
+
+    # 同步到内存（如果game存在）
+    game = games_db.get(judge_data.game_id)
+    if game:
+        question_record = {
+            "id": f"q_{len(game['questions']) + 1}",
+            "question": judge_data.question,
+            "answer": judgment.get("answer", "是"),
+            "is_relevant": judgment.get("is_relevant", True),
+            "reason": judgment.get("reason", ""),
+            "player": "single_player",
+            "timestamp": datetime.now().isoformat()
+        }
+        game["questions"].append(question_record)
+        game["current_question_count"] += 1
 
     return {
         "success": True,
@@ -765,6 +924,10 @@ async def delete_game(game_id: str):
 
     del games_db[game_id]
     redis_service.delete_puzzle(game_id)
+    try:
+        redis_service.delete_history(game_id)
+    except Exception:
+        pass
 
     return {"success": True, "message": "游戏已删除"}
 

@@ -12,8 +12,6 @@ Full-stack monolithic web application for a "Turtle Soup" (海龟汤) situation 
 ```bash
 python main.py                                    # start server (port 8000)
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload  # with hot reload
-python scripts/start_server.py                    # optimized start with reload exclusions
-pytest tests/                                     # run backend tests
 ```
 
 **Frontend:**
@@ -23,7 +21,6 @@ npm install          # first time only
 npm run dev          # Vite dev server (port 3000), proxies /api and /ws to backend
 npm run build        # production build
 npm run test:unit    # Vitest single run
-npm run test:watch   # Vitest watch mode
 ```
 
 **One-click start (both services):**
@@ -42,10 +39,8 @@ FastAPI Backend (port 8000)
   ├── api/user.py          /profile, /user/nickname, /user/avatar
   ├── api/chat.py          /ws/chat/{token} (WebSocket), /chat/online-users
   ├── api/turtle_soup.py   /turtle-soup/* (game CRUD, questions, answers)
-  ├── core/config.py       DB engine (MySQL via SQLModel), JWT config, file paths
-  ├── core/database.py     SQLAlchemy engine with connection pooling (duplicate of config.py)
+  ├── core/config.py       DB engine (MySQL via SQLAlchemy), JWT config, file paths
   ├── core/security.py     bcrypt password hashing, JWT encode/decode
-  ├── core/permissions.py  3-tier: public / authenticated (JWT) / premium (API key for LLM)
   ├── core/llm_service.py  LLM service: dual-mode (local Ollama / external OpenAI-compatible API)
   ├── models/db_models.py  User, PublicChatMessage, PrivateChatSession, PrivateChatMessage
                               |
@@ -53,8 +48,6 @@ MySQL (fastapi_chat, localhost:3306)    Ollama (port 11434, optional)
 ```
 
 **Frontend structure:** Vue 3 + Pinia + Vue Router. Two views: `LoginView` (`/`) and `ChatView` (`/chat`). ChatView contains the `TurtleSoupGame` component. API calls use `fetch` with Bearer token in `frontend/src/utils/api.js`.
-
-**Dual DB config:** Both `core/config.py` (SQLModel engine) and `core/database.py` (SQLAlchemy engine with pooling) define MySQL connections. `main.py` imports from `core.database`; API routers import from `core.config`. Be aware of this split when modifying DB configuration.
 
 **Game state:** Active games are stored in an in-memory dict (`games_db`) in `api/turtle_soup.py` — lost on restart. Chat messages persist to MySQL.
 

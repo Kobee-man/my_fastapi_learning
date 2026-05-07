@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from typing import Optional
 
 from core.config import get_db, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, AVATAR_DIR
@@ -37,7 +38,7 @@ def update_nickname(
         raise HTTPException(status_code=400, detail="昵称不能为空")
     
     # 从当前Session重新查询用户
-    db_user = db.exec(select(User).where(User.uid == current_user.uid)).first()
+    db_user = db.execute(select(User).where(User.uid == current_user.uid)).scalars().first()
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
@@ -72,7 +73,7 @@ async def upload_avatar(
     
     #从当前session重新查询用户实例
     
-    db_user:Optional[User] = db.exec(select(User).where(User.uid == current_user.uid)).first()
+    db_user:Optional[User] = db.execute(select(User).where(User.uid == current_user.uid)).scalars().first()
     
     if not db_user:
         raise HTTPException(status_code=404,detail="用户不存在")

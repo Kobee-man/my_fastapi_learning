@@ -7,12 +7,13 @@ import logging
 import uuid
 import asyncio
 
-from core.config import SECRET_KEY, ALGORITHM, get_db
+from core.config import SECRET_KEY, ALGORITHM, get_db, engine
 from core.security import get_current_user
 from models.db_models import User
 from models.db_models import PublicChatMessage
 from core.thread_pool import tp_manager
-from sqlmodel import Session, select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +49,7 @@ class ConnectionManager:
         try:
             # 查询最近50条消息
             statement = select(PublicChatMessage).order_by(PublicChatMessage.send_time.desc()).limit(50)
-            messages: List[PublicChatMessage] = list(db.exec(statement).all())
+            messages: List[PublicChatMessage] = list(db.execute(statement).scalars().all())
             # 反转顺序，使最早的消息在前
             messages.reverse()
             
@@ -56,10 +57,10 @@ class ConnectionManager:
             for msg in messages:
                 # 查询发送者信息
                 user_statement = select(User).where(User.uid == msg.sender_uid)
-                user = db.exec(user_statement).first()
+                user = db.execute(user_statement).scalars().first()
                 if user:
                     history_messages.append({
-                        "type": "system" if msg.is_system else "message",
+                        "type": "system" if msg.is_system else "message", # type: ignore
                         "content": msg.content,
                         "username": user.username,
                         "nickname": user.nickname or user.username,
@@ -97,29 +98,29 @@ class ConnectionManager:
                     logger.error(f"发送个人消息失败: {e}")
 
 # 广播消息给所有在线用户
-    async def broadcast(self, message: dict, db: Session, user_id: Optional[str] = None):
+    async def broadcast(self, message: dict, db: Session, user_id: str = ""):
         logger.info(f"广播消息: {message['content'][:20]}...")
 
         def save_message_to_db():
+            if not user_id:
+                logger.warning("广播消息缺少user_id，跳过数据库保存")
+                return
+            # 使用独立Session，避免与WebSocket处理的db session冲突
+            local_session = Session(bind=engine)
             try:
-                if user_id:
-                    db_message = PublicChatMessage(
-                        sender_uid=user_id,
-                        content=message['content'],
-                        is_system=False
-                    )
-                else:
-                    db_message = PublicChatMessage(
-                        sender_uid="0000000000",
-                        content=message['content'],
-                        is_system=True
-                    )
-                db.add(db_message)
-                db.commit()
-                db.refresh(db_message)
+                is_system = message.get("type") == "system"
+                db_message = PublicChatMessage(
+                    sender_uid=user_id,
+                    content=message['content'],
+                    is_system=is_system
+                )
+                local_session.add(db_message)
+                local_session.commit()
             except Exception as e:
                 logger.error(f"保存消息到数据库失败: {e}")
-                db.rollback()
+                local_session.rollback()
+            finally:
+                local_session.close()
 
         tp_manager.submit(save_message_to_db)
 
@@ -176,9 +177,9 @@ async def websocket_endpoint(
             logger.error("JWT解码失败")
             raise credentials_exception
         
-        # 使用正确的sqlmodel语法查询用户
+        # 查询用户
         statement = select(User).where(User.username == username)
-        user = db.exec(statement).first()
+        user = db.execute(statement).scalars().first()
         if user is None:
             logger.error(f"用户 {username} 不存在")
             raise credentials_exception
@@ -206,7 +207,7 @@ async def websocket_endpoint(
             "nickname": user.nickname or user.username,
             "avatar_url": user.avatar_url,
             "timestamp": datetime.now().isoformat()
-        }, db)
+        }, db, user.uid)
         
         try:
             while True:
@@ -224,7 +225,7 @@ async def websocket_endpoint(
                 }
                 
                 # 广播消息
-                await manager.broadcast(message, db, user.uid)
+                await manager.broadcast(message, db, user.uid) # type: ignore
                 
         except WebSocketDisconnect:
             # 用户断开连接
@@ -236,7 +237,7 @@ async def websocket_endpoint(
                     "username": user.username,
                     "nickname": user.nickname or user.username,
                     "timestamp": datetime.now().isoformat()
-                }, db)
+                }, db, user.uid)
     except HTTPException as e:
         logger.error(f"WebSocket认证失败: {e.detail}")
         await websocket.close(code=1008, reason=f"认证失败: {e.detail}")
@@ -260,7 +261,7 @@ async def get_online_users(
         
         try:
             statement = select(User).where(User.uid == user_id_str)
-            user = db.exec(statement).first()
+            user = db.execute(statement).scalars().first()
             if user:
                 online_users.append({
                     "uid": user.uid,
@@ -288,7 +289,7 @@ async def get_chat_history(
     try:
         # 从数据库查询历史消息
         statement = select(PublicChatMessage).order_by(PublicChatMessage.send_time.desc()).limit(limit)
-        messages: List[PublicChatMessage] = list(db.exec(statement).all())
+        messages: List[PublicChatMessage] = list(db.execute(statement).scalars().all())
         # 反转顺序，使最早的消息在前
         messages.reverse()
         
@@ -297,10 +298,10 @@ async def get_chat_history(
         for msg in messages:
             # 查询发送者信息
             user_statement = select(User).where(User.uid == msg.sender_uid)
-            user = db.exec(user_statement).first()
+            user = db.execute(user_statement).scalars().first()
             if user:
                 history_messages.append({
-                    "type": "system" if msg.is_system else "message",
+                    "type": "system" if msg.is_system else "message", # type: ignore
                     "content": msg.content,
                     "username": user.username,
                     "nickname": user.nickname or user.username,

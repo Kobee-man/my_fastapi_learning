@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import Response
 from pydantic import BaseModel, field_validator
-from sqlmodel import Session, select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from typing import Optional
 
 from core.config import get_db
@@ -50,7 +51,7 @@ class ForgotPasswordRequest(BaseModel):
 
 @router.post("/register", summary="用户注册")
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.exec(select(User).where(User.username == user.username)).first()
+    existing_user = db.execute(select(User).where(User.username == user.username)).scalars().first()
     if existing_user:
         raise HTTPException(status_code=400, detail="用户名已存在")
 
@@ -69,7 +70,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", summary="登录获取 Token")
 def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    user = db.exec(select(User).where(User.username == login_data.username)).first()
+    user = db.execute(select(User).where(User.username == login_data.username)).scalars().first()
     if not user or not verify_password(login_data.password, user.password):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
@@ -78,7 +79,7 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password", summary="忘记密码-重置密码")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.exec(select(User).where(User.username == req.username)).first()
+    user = db.execute(select(User).where(User.username == req.username)).scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 

@@ -404,6 +404,7 @@ function continueSavedGame() {
   if (!savedGameProgress.value) return
   const p = savedGameProgress.value
   Object.assign(game, {
+    gameId: p.gameId || '',
     puzzle: p.puzzle,
     settings: p.settings,
     questions: p.questions || [],
@@ -453,13 +454,9 @@ async function submitQuestion() {
   try {
     const history = game.questions.map(q => q.question)
     const data = await api.judgeQuestion({
+      game_id: game.gameId,
       question: currentQuestion.value,
-      truth: game.puzzle.truth,
-      situation: game.puzzle.situation,
-      keywords: [],
-      hints: [],
-      question_history: history,
-      game_id: game.gameId
+      question_history: history
     })
 
     game.questions.push({
@@ -517,19 +514,18 @@ async function submitAnswer() {
   if (!myAnswer.value.trim()) return
   submittingAnswer.value = true
   try {
-    const story = `情境：${game.puzzle.situation}\n真相：${game.puzzle.truth}`
-    const data = await api.semanticJudge(story, `玩家答案：${myAnswer.value.trim()}。这个答案是否正确揭示了真相？`)
+    const data = await api.checkSinglePlayerAnswer(game.gameId, myAnswer.value.trim())
 
-    const j = data.judgment
-    const correct = j.answer === 'Yes' && j.confidence >= 0.7
-
-    game.result = correct ? 'correct' : 'wrong'
-    game.feedback = j.reason || (correct ? '正确！' : '答案不正确')
+    game.result = data.is_correct ? 'correct' : 'wrong'
+    game.feedback = data.result?.feedback || (data.is_correct ? '正确！' : '答案不正确')
     game.status = 'finished'
     game.endTime = new Date().toISOString()
     showAnswerInput.value = false
 
-    if (correct) localStorage.removeItem('turtle_soup_single_progress')
+    if (data.is_correct) {
+      if (data.truth) game.puzzle.truth = data.truth
+      localStorage.removeItem('turtle_soup_single_progress')
+    }
   } catch (e) {
     errorMsg.value = e.detail || '验证答案失败'
   } finally {
@@ -543,6 +539,7 @@ function saveProgress() {
   saving.value = true
   try {
     localStorage.setItem('turtle_soup_single_progress', JSON.stringify({
+      gameId: game.gameId,
       puzzle: game.puzzle,
       settings: game.settings,
       questions: game.questions,
